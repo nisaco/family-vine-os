@@ -16,3 +16,4 @@ export default async function SongsPage() {
 
   return <SongsClient songs={songs} currentUserRole={user.role} />;
 }
+

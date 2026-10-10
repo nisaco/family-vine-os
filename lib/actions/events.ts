@@ -111,3 +111,4 @@ export async function submitRsvpAction(prevState: unknown, formData: FormData) {
   revalidatePath('/dashboard');
   return { success: 'Your RSVP has been recorded.' };
 }
+

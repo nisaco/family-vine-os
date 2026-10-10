@@ -117,3 +117,4 @@ describe('Financial Ledger Integrity and Reversal Rules', () => {
     expect(activeTotal.total).toBe(0);
   });
 });
+

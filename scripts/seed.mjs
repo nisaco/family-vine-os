@@ -25,8 +25,8 @@ db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
 
 // Initialize schema if not already present
-import { SCHEMA_SQL } from '../lib/db/migrate.ts';
-db.exec(SCHEMA_SQL);
+const schemaSql = fs.readFileSync(path.resolve(process.cwd(), 'lib', 'db', 'schema.sql'), 'utf-8');
+db.exec(schemaSql);
 
 const now = new Date();
 const nowIso = now.toISOString();
@@ -694,7 +694,7 @@ async function seed() {
 
   // Seed initial audit log
   const insertAudit = db.prepare(`
-    INSERT INTO audit_logs (id, actor_id, actor_name, action, entity_type, entity_id, details, created_at)
+    INSERT OR REPLACE INTO audit_logs (id, actor_id, actor_name, action, entity_type, entity_id, details, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
@@ -727,3 +727,4 @@ seed().catch((err) => {
   console.error('Seed script failed:', err);
   process.exit(1);
 });
+

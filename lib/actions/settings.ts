@@ -73,3 +73,4 @@ export async function updateSettingsAction(prevState: unknown, formData: FormDat
   revalidatePath('/dashboard');
   return { success: 'Choir settings updated successfully.' };
 }
+

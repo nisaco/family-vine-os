@@ -244,3 +244,4 @@ export async function changePasswordAction(prevState: unknown, formData: FormDat
   revalidatePath('/profile');
   return { success: 'Password changed successfully.' };
 }
+

@@ -61,3 +61,4 @@ export async function archiveAnnouncementAction(id: string) {
   revalidatePath('/dashboard');
   return { success: 'Announcement archived.' };
 }
+

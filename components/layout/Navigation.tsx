@@ -323,3 +323,4 @@ export function Navigation({ user, choirName }: NavigationProps) {
     </>
   );
 }
+

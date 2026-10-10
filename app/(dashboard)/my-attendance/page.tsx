@@ -124,3 +124,4 @@ export default async function MyAttendancePage() {
     </div>
   );
 }
+

@@ -110,3 +110,4 @@ describe('Member Privacy Boundary and Field Sanitization', () => {
     expect(sanitized.officer_notes).toBe('Officer observation: Needs additional coaching on pitch');
   });
 });
+

@@ -30,3 +30,4 @@ export function generateSafeCsv(headers: string[], rows: (unknown[])[]): string 
   // Prepend UTF-8 BOM so Excel opens UTF-8 encoded characters properly
   return '\uFEFF' + [headerRow, ...dataRows].join('\r\n');
 }
+

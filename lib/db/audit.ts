@@ -41,3 +41,4 @@ export function logAudit(params: AuditParams, customDb?: ReturnType<typeof getDb
     console.error('Failed to write audit log:', error);
   }
 }
+

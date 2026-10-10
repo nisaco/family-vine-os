@@ -171,3 +171,4 @@ npm run test:watch
 1. **Local File Storage vs. Cloud Storage**: Song resources currently support verified external URLs (IMSLP, Google Drive, ChoraLine, YouTube). Direct binary file upload to S3/Cloud Storage is left for deployment-specific configurations.
 2. **Financial Scope**: The application is an internal ledger and bookkeeping system; it does not connect directly to banking APIs or process credit card payments natively.
 3. **Email Notifications**: Outgoing SMTP integration for invitations and reminder alerts can be connected to standard providers using the audit log event triggers.
+

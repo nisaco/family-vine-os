@@ -69,3 +69,4 @@ export const COMMON_TIMEZONES = [
   'Asia/Singapore',
   'Australia/Sydney',
 ];
+

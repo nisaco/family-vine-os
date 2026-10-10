@@ -390,3 +390,4 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
     </div>
   );
 }
+

@@ -251,3 +251,4 @@ export interface ChoirSettings {
   standard_monthly_dues_cents: number;
   allow_member_birthday_view: boolean;
 }
+

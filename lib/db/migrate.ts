@@ -282,3 +282,4 @@ export function runMigrations(db: Database.Database): void {
     })();
   }
 }
+

@@ -34,3 +34,4 @@ describe('CSV Safety and Formula Injection Prevention', () => {
     expect(csv).toContain(`"'=cmd|calc"`);
   });
 });
+

@@ -90,3 +90,4 @@ export async function correctAttendanceAction(
   revalidatePath('/dashboard');
   return { success: 'Attendance corrected and audit log recorded.' };
 }
+

@@ -78,3 +78,4 @@ describe('Authentication, Sessions, and Account Status', () => {
     expect(getUserByToken(token, db)).toBeNull();
   });
 });
+

@@ -38,3 +38,4 @@ describe('Currency and Minor-Unit Arithmetic', () => {
     expect(validatePositiveCents(12.5).valid).toBe(false);
   });
 });
+
