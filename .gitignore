@@ -12,7 +12,7 @@ out/
 .env*.local
 
 # Database
-data/
+/data/
 *.db
 *.db-journal
 *.db-wal
