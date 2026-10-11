@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useFormState } from 'react-dom';
-import { SafeUser, UserRole, VoicePart, UserStatus } from '@/lib/types';
+import { SafeUser, UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
 import { createMemberAction, updateMemberAction, toggleMemberStatusAction } from '@/lib/actions/members';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -22,7 +22,37 @@ import {
   MapPin,
   HeartHandshake,
   FileText,
+  Users,
 } from 'lucide-react';
+
+export const WING_ROLES: Record<string, string[]> = {
+  'Family of Praise': ['Soprano', 'Alto', 'Tenor', 'Bass', 'Choir Director', 'Lead Vocalist'],
+  'Asaphites': [
+    'Keyboardist / Organist',
+    'Drummer',
+    'Bassist',
+    'Lead Guitarist',
+    'Acoustic Guitarist',
+    'Horns / Saxophone',
+    'Sound / Audio Engineer',
+  ],
+  'Vimmies': [
+    'Choreographer',
+    'Dance Lead',
+    'Liturgical Dancer',
+    'Flags & Props Dancer',
+    'Praise Dancer',
+  ],
+  'General Leadership': [
+    'Executive Director',
+    'President',
+    'General Secretary',
+    'Financial Secretary',
+    'Treasurer',
+    'Chaplain',
+    'Patron',
+  ],
+};
 
 interface DirectoryClientProps {
   members: SafeUser[];
@@ -36,12 +66,15 @@ export function DirectoryClient({
   currentUserRole,
 }: DirectoryClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [wingFilter, setWingFilter] = useState<string>('ALL');
   const [voiceFilter, setVoiceFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ACTIVE');
   const [selectedMember, setSelectedMember] = useState<SafeUser | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [createWing, setCreateWing] = useState<MinistryWing>('Family of Praise');
+  const [editWing, setEditWing] = useState<MinistryWing>('Family of Praise');
 
   const [createState, createAction] = useFormState(createMemberAction, null);
   const [editState, editAction] = useFormState(updateMemberAction, null);
@@ -56,13 +89,16 @@ export function DirectoryClient({
       m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.phone && m.phone.includes(searchTerm));
 
+    const matchesWing =
+      wingFilter === 'ALL' || m.wing === wingFilter;
+
     const matchesVoice =
-      voiceFilter === 'ALL' || m.voice_part === voiceFilter;
+      voiceFilter === 'ALL' || m.voice_part === voiceFilter || m.wing_role === voiceFilter;
 
     const matchesStatus =
       statusFilter === 'ALL' || m.status === statusFilter;
 
-    return matchesSearch && matchesVoice && matchesStatus;
+    return matchesSearch && matchesWing && matchesVoice && matchesStatus;
   });
 
   const handleOpenDetail = (member: SafeUser) => {
@@ -72,6 +108,7 @@ export function DirectoryClient({
 
   const handleOpenEdit = (member: SafeUser) => {
     setSelectedMember(member);
+    setEditWing((member.wing as MinistryWing) || 'Family of Praise');
     setIsEditOpen(true);
   };
 
@@ -95,7 +132,7 @@ export function DirectoryClient({
             Member Directory
           </h1>
           <p className="text-sm text-stone-500 mt-0.5">
-            Registered choristers, accompanists, and leadership team
+            Registered choristers (Family of Praise), instrumentalists (Asaphites), and dancers (Vimmies)
           </p>
         </div>
 
@@ -122,17 +159,15 @@ export function DirectoryClient({
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
           <select
-            value={voiceFilter}
-            onChange={(e) => setVoiceFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
+            value={wingFilter}
+            onChange={(e) => setWingFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
           >
-            <option value="ALL">All Voice Parts</option>
-            <option value="Soprano">Soprano</option>
-            <option value="Alto">Alto</option>
-            <option value="Tenor">Tenor</option>
-            <option value="Bass">Bass</option>
-            <option value="Musician">Musician / Organist</option>
-            <option value="Director">Music Director</option>
+            <option value="ALL">All Wings</option>
+            <option value="Family of Praise">Family of Praise (Choir)</option>
+            <option value="Asaphites">Asaphites (Instrumentalists)</option>
+            <option value="Vimmies">Vimmies (Dancers)</option>
+            <option value="General Leadership">General Leadership</option>
           </select>
 
           <select
@@ -172,20 +207,53 @@ export function DirectoryClient({
                     )}
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <Badge
-                      variant={
-                        member.role === 'ADMIN'
-                          ? 'purple'
-                          : member.role === 'PRESIDENT'
-                          ? 'gold'
-                          : member.role === 'MEMBER'
-                          ? 'default'
-                          : 'info'
-                      }
-                      size="sm"
-                    >
-                      {member.role.replace('_', ' ')}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1 justify-end">
+                      {member.wing && (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          member.wing === 'Family of Praise'
+                            ? 'bg-rose-50 text-rose-800 border-rose-200'
+                            : member.wing === 'Asaphites'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : member.wing === 'Vimmies'
+                            ? 'bg-purple-50 text-purple-800 border-purple-200'
+                            : 'bg-stone-50 text-stone-700 border-stone-200'
+                        }`}>
+                          {member.wing}
+                        </span>
+                      )}
+                      <Badge
+                        variant={
+                          member.role === 'ADMIN'
+                            ? 'purple'
+                            : member.role === 'PRESIDENT'
+                            ? 'gold'
+                            : member.role === 'WELFARE_OFFICER'
+                            ? 'gold'
+                            : member.role === 'MEMBER'
+                            ? 'default'
+                            : 'info'
+                        }
+                        size="sm"
+                      >
+                        {member.role.replace('_', ' ')}
+                      </Badge>
+                      {(() => {
+                        if (!member.birth_date) return null;
+                        const now = new Date();
+                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                        const dd = String(now.getDate()).padStart(2, '0');
+                        const localMmdd = `${mm}-${dd}`;
+                        const utcMmdd = `${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
+                        if (member.birth_date.endsWith(localMmdd) || member.birth_date.endsWith(utcMmdd)) {
+                          return (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-950 bg-amber-100/90 px-2 py-0.5 rounded border border-amber-300 font-mono shadow-2xs">
+                              Birthday Today
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     {member.status === 'INACTIVE' && (
                       <Badge variant="danger" size="sm">
                         Deactivated
@@ -196,8 +264,8 @@ export function DirectoryClient({
 
                 <div className="space-y-1.5 text-xs text-stone-600">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-stone-800">Voice Part:</span>
-                    <span>{member.voice_part || 'General'}</span>
+                    <span className="font-medium text-stone-800">Ministry Role:</span>
+                    <span className="font-semibold text-stone-900">{member.wing_role || member.voice_part || 'Member'}</span>
                   </div>
                   <div className="flex items-center gap-2 truncate">
                     <Mail className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
@@ -271,13 +339,29 @@ export function DirectoryClient({
           isOpen={isDetailOpen}
           onClose={() => setIsDetailOpen(false)}
           title={selectedMember.full_name}
-          description={`${selectedMember.role.replace('_', ' ')} • ${selectedMember.voice_part || 'General'}`}
+          description={`${selectedMember.wing || 'Family Vine'} • ${selectedMember.wing_role || selectedMember.voice_part || 'Member'}`}
         >
           <div className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-3 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
               <div>
                 <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
-                  Status
+                  Ministry Wing
+                </span>
+                <span className="font-semibold text-stone-900">
+                  {selectedMember.wing || 'Not assigned'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
+                  Wing Role / Voice
+                </span>
+                <span className="font-semibold text-stone-900">
+                  {selectedMember.wing_role || selectedMember.voice_part || 'General'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
+                  Account Status
                 </span>
                 <span className="font-medium text-stone-900">
                   {selectedMember.status}
@@ -305,6 +389,14 @@ export function DirectoryClient({
                 </span>
                 <span className="font-medium text-stone-900">
                   {selectedMember.phone || 'Not provided'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
+                  Birth Date
+                </span>
+                <span className="font-medium text-stone-900 font-mono">
+                  {selectedMember.birth_date || 'Not recorded'}
                 </span>
               </div>
             </div>
@@ -356,8 +448,8 @@ export function DirectoryClient({
       <Modal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title="Add New Choir Member"
-        description="Register a new chorister into the choir system."
+        title="Add New Member"
+        description="Register a new member into Family Vine (Choir, Instrumentalists, or Dancers)."
       >
         <form
           action={async (formData) => {
@@ -373,58 +465,82 @@ export function DirectoryClient({
           )}
 
           <Input label="Full Name" name="fullName" required placeholder="e.g. John Doe" />
-          <Input label="Email Address" name="email" type="email" required placeholder="chorister@familyvinechoir.org" />
+          <Input label="Email Address" name="email" type="email" required placeholder="member@familyvinechoir.org" />
           <Input label="Phone Number" name="phone" placeholder="+1 (555) 000-0000" />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
-                Voice Part
+                Ministry Wing
               </label>
               <select
-                name="voicePart"
+                name="wing"
+                value={createWing}
+                onChange={(e) => setCreateWing(e.target.value as MinistryWing)}
                 className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
               >
-                <option value="Soprano">Soprano</option>
-                <option value="Alto">Alto</option>
-                <option value="Tenor">Tenor</option>
-                <option value="Bass">Bass</option>
-                <option value="Musician">Musician</option>
-                <option value="Director">Music Director</option>
-                <option value="General">General</option>
+                <option value="Family of Praise">Family of Praise (Choir)</option>
+                <option value="Asaphites">Asaphites (Instrumentalists)</option>
+                <option value="Vimmies">Vimmies (Dancers)</option>
+                <option value="General Leadership">General Leadership</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
-                Choir Role
+                Wing Role / Specialization
               </label>
               <select
-                name="role"
-                defaultValue="MEMBER"
-                disabled={!isAdmin}
-                className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 disabled:bg-stone-100"
+                name="wingRole"
+                className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
               >
-                <option value="MEMBER">Member</option>
-                {isAdmin && (
-                  <>
-                    <option value="PRESIDENT">President</option>
-                    <option value="GENERAL_SECRETARY">General Secretary</option>
-                    <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
-                    <option value="TREASURER">Treasurer</option>
-                    <option value="ADMIN">Administrator</option>
-                  </>
-                )}
+                {(WING_ROLES[createWing] || []).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          <Input
-            label="Temporary Initial Password"
-            name="temporaryPassword"
-            defaultValue="Choir2026!"
-            helperText="Member will use this to sign in and can change it on their profile."
-          />
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+              Leadership / Administrative Role
+            </label>
+            <select
+              name="role"
+              defaultValue="MEMBER"
+              disabled={!isAdmin}
+              className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 disabled:bg-stone-100"
+            >
+              <option value="MEMBER">Member</option>
+              {isAdmin && (
+                <>
+                  <option value="PRESIDENT">President</option>
+                  <option value="GENERAL_SECRETARY">General Secretary</option>
+                  <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
+                  <option value="TREASURER">Treasurer</option>
+                  <option value="WELFARE_OFFICER">Welfare Officer</option>
+                  <option value="ADMIN">Administrator</option>
+                </>
+              )}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Birth Date (Optional)"
+              name="birthDate"
+              type="date"
+              helperText="Fellowship birthday citation & care."
+            />
+            <Input
+              label="Temporary Initial Password"
+              name="temporaryPassword"
+              defaultValue="Choir2026!"
+              helperText="Member can change this on profile."
+            />
+          </div>
 
           <Input label="Home Address (Optional)" name="address" placeholder="Physical street address" />
           
@@ -482,46 +598,70 @@ export function DirectoryClient({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
-                  Voice Part
+                  Ministry Wing
                 </label>
                 <select
-                  name="voicePart"
-                  defaultValue={selectedMember.voice_part || 'General'}
+                  name="wing"
+                  value={editWing}
+                  onChange={(e) => setEditWing(e.target.value as MinistryWing)}
                   className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
                 >
-                  <option value="Soprano">Soprano</option>
-                  <option value="Alto">Alto</option>
-                  <option value="Tenor">Tenor</option>
-                  <option value="Bass">Bass</option>
-                  <option value="Musician">Musician</option>
-                  <option value="Director">Music Director</option>
-                  <option value="General">General</option>
+                  <option value="Family of Praise">Family of Praise (Choir)</option>
+                  <option value="Asaphites">Asaphites (Instrumentalists)</option>
+                  <option value="Vimmies">Vimmies (Dancers)</option>
+                  <option value="General Leadership">General Leadership</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
-                  Choir Role
+                  Wing Role / Specialization
                 </label>
                 <select
-                  name="role"
-                  defaultValue={selectedMember.role}
-                  disabled={!isAdmin}
-                  className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 disabled:bg-stone-100"
+                  name="wingRole"
+                  defaultValue={selectedMember.wing_role || selectedMember.voice_part || ''}
+                  className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
                 >
-                  <option value="MEMBER">Member</option>
-                  {isAdmin && (
-                    <>
-                      <option value="PRESIDENT">President</option>
-                      <option value="GENERAL_SECRETARY">General Secretary</option>
-                      <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
-                      <option value="TREASURER">Treasurer</option>
-                      <option value="ADMIN">Administrator</option>
-                    </>
-                  )}
+                  {(WING_ROLES[editWing] || []).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                Leadership / Administrative Role
+              </label>
+              <select
+                name="role"
+                defaultValue={selectedMember.role}
+                disabled={!isAdmin}
+                className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 disabled:bg-stone-100"
+              >
+                <option value="MEMBER">Member</option>
+                {isAdmin && (
+                  <>
+                    <option value="PRESIDENT">President</option>
+                    <option value="GENERAL_SECRETARY">General Secretary</option>
+                    <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
+                    <option value="TREASURER">Treasurer</option>
+                    <option value="WELFARE_OFFICER">Welfare Officer</option>
+                    <option value="ADMIN">Administrator</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <Input
+              label="Birth Date (Optional)"
+              name="birthDate"
+              type="date"
+              defaultValue={selectedMember.birth_date || ''}
+              helperText="Fellowship birthday citation & care."
+            />
 
             <Input label="Address" name="address" defaultValue={selectedMember.address || ''} />
 

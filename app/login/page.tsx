@@ -72,67 +72,127 @@ export default function LoginPage() {
 
           {/* Quick Demo Credentials Helper for Local Evaluation */}
           <div className="mt-8 pt-6 border-t border-stone-200">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-700 uppercase tracking-wider mb-2">
-              <KeyRound className="w-3.5 h-3.5 text-gold-600" />
-              <span>Demo Evaluation Logins</span>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-700 uppercase tracking-wider">
+                <KeyRound className="w-3.5 h-3.5 text-gold-600" />
+                <span>Demo Evaluation Logins</span>
+              </div>
+              <span className="text-[11px] text-stone-400 font-mono">Password123!</span>
             </div>
             <p className="text-xs text-stone-500 mb-3">
-              Click any role to test role-based permissions (default demo password: <code className="bg-stone-100 px-1 py-0.5 rounded font-mono text-stone-800">Password123!</code>):
+              Click any profile to auto-fill credentials and test role-based permissions:
             </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('admin@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">Administrator</div>
-                <div className="text-[11px] text-stone-500 truncate">admin@...</div>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('president@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">President</div>
-                <div className="text-[11px] text-stone-500 truncate">president@...</div>
-              </button>
+            {/* Directorate & Executive Officers */}
+            <div className="mb-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+                Directorate & Administrative Officers
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('admin@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Administrator</div>
+                  <div className="text-[11px] text-stone-500 truncate">admin@familyvine...</div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('secretary@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">General Secretary</div>
-                <div className="text-[11px] text-stone-500 truncate">secretary@...</div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('president@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">President</div>
+                  <div className="text-[11px] text-stone-500 truncate">president@familyvine...</div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('finsec@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">Financial Sec.</div>
-                <div className="text-[11px] text-stone-500 truncate">finsec@...</div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('welfare@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-amber-200 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-300 transition-colors"
+                >
+                  <div className="font-semibold text-amber-950 flex items-center justify-between">
+                    <span>Welfare Officer</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-800 bg-amber-200/80 px-1 py-0.2 rounded">New</span>
+                  </div>
+                  <div className="text-[11px] text-amber-800/80 truncate">welfare@familyvine...</div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('treasurer@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">Treasurer</div>
-                <div className="text-[11px] text-stone-500 truncate">treasurer@...</div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('secretary@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">General Secretary</div>
+                  <div className="text-[11px] text-stone-500 truncate">secretary@familyvine...</div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => fillDemoAccount('kofi.ansah@familyvinechoir.org')}
-                className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-              >
-                <div className="font-semibold text-stone-800">Member (Tenor)</div>
-                <div className="text-[11px] text-stone-500 truncate">kofi.ansah@...</div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('finsec@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Financial Sec.</div>
+                  <div className="text-[11px] text-stone-500 truncate">finsec@familyvine...</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('treasurer@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Treasurer</div>
+                  <div className="text-[11px] text-stone-500 truncate">treasurer@familyvine...</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Wing Members & Today's Birthday Celebrant */}
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+                Choir, Band & Dance Wing Members
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('kofi.ansah@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-gold-300 bg-gold-50/60 hover:bg-gold-50 hover:border-gold-400 transition-colors"
+                >
+                  <div className="font-semibold text-gold-950 flex items-center justify-between">
+                    <span>Kofi Ansah (Praise)</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-gold-900 bg-gold-200 px-1 py-0.2 rounded">Birthday Today</span>
+                  </div>
+                  <div className="text-[11px] text-gold-800 truncate">kofi.ansah@familyvine...</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('yaw.bio@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Yaw Bio (Asaphites)</div>
+                  <div className="text-[11px] text-stone-500 truncate">yaw.bio@familyvine...</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('charlene.mensah@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Charlene (Vimmies)</div>
+                  <div className="text-[11px] text-stone-500 truncate">charlene.mensah@...</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillDemoAccount('akua.serwaa@familyvinechoir.org')}
+                  className="text-left p-2 rounded-lg border border-stone-200 hover:bg-stone-50 hover:border-stone-300 transition-colors"
+                >
+                  <div className="font-semibold text-stone-800">Akua (Soprano)</div>
+                  <div className="text-[11px] text-stone-500 truncate">akua.serwaa@familyvine...</div>
+                </button>
+              </div>
             </div>
           </div>
         </div>

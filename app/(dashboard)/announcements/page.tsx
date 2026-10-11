@@ -13,7 +13,7 @@ export default async function AnnouncementsPage() {
   }
 
   const settings = getChoirSettings();
-  const announcements = getAnnouncements(user.role, user.voice_part);
+  const announcements = getAnnouncements(user.role, user.voice_part, user.wing);
 
   return (
     <AnnouncementsClient

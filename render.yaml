@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: family-vine-choir
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /var/data/family_vine.db
+      - key: SESSION_SECRET
+        generateValue: true
+    disk:
+      name: choir-data
+      mountPath: /var/data
+      sizeGB: 1
+

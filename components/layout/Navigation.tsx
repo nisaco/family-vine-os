@@ -39,7 +39,8 @@ export function Navigation({ user, choirName }: NavigationProps) {
     user.role === 'PRESIDENT' ||
     user.role === 'GENERAL_SECRETARY' ||
     user.role === 'FINANCIAL_SECRETARY' ||
-    user.role === 'TREASURER';
+    user.role === 'TREASURER' ||
+    user.role === 'WELFARE_OFFICER';
 
   const canViewChoirFinance =
     user.role === 'ADMIN' ||
@@ -127,6 +128,7 @@ export function Navigation({ user, choirName }: NavigationProps) {
     GENERAL_SECRETARY: 'info' as unknown as 'default',
     FINANCIAL_SECRETARY: 'success',
     TREASURER: 'success',
+    WELFARE_OFFICER: 'gold',
     MEMBER: 'default',
   };
 
@@ -136,6 +138,7 @@ export function Navigation({ user, choirName }: NavigationProps) {
     GENERAL_SECRETARY: 'General Secretary',
     FINANCIAL_SECRETARY: 'Financial Secretary',
     TREASURER: 'Treasurer',
+    WELFARE_OFFICER: 'Welfare Officer',
     MEMBER: 'Choir Member',
   };
 

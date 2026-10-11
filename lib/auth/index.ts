@@ -83,7 +83,8 @@ export function sanitizeUser(user: User, requesterRole?: UserRole, isSelf = fals
   const isOfficerOrAdmin =
     requesterRole === 'ADMIN' ||
     requesterRole === 'PRESIDENT' ||
-    requesterRole === 'GENERAL_SECRETARY';
+    requesterRole === 'GENERAL_SECRETARY' ||
+    requesterRole === 'WELFARE_OFFICER';
 
   const safe: SafeUser = {
     id: user.id,
@@ -91,6 +92,8 @@ export function sanitizeUser(user: User, requesterRole?: UserRole, isSelf = fals
     full_name: user.full_name,
     preferred_name: user.preferred_name,
     phone: user.phone,
+    wing: user.wing || (user.voice_part === 'Musician' ? 'Asaphites' : 'Family of Praise'),
+    wing_role: user.wing_role || user.voice_part || 'Chorister',
     voice_part: user.voice_part,
     role: user.role,
     status: user.status,
@@ -182,14 +185,16 @@ export function hasPermission(
       return (
         userRole === 'ADMIN' ||
         userRole === 'PRESIDENT' ||
-        userRole === 'GENERAL_SECRETARY'
+        userRole === 'GENERAL_SECRETARY' ||
+        userRole === 'WELFARE_OFFICER'
       );
 
     case 'MANAGE_ANNOUNCEMENTS':
       return (
         userRole === 'ADMIN' ||
         userRole === 'PRESIDENT' ||
-        userRole === 'GENERAL_SECRETARY'
+        userRole === 'GENERAL_SECRETARY' ||
+        userRole === 'WELFARE_OFFICER'
       );
 
     case 'MANAGE_MINUTES':
@@ -218,7 +223,8 @@ export function hasPermission(
       return (
         userRole === 'ADMIN' ||
         userRole === 'PRESIDENT' ||
-        userRole === 'GENERAL_SECRETARY'
+        userRole === 'GENERAL_SECRETARY' ||
+        userRole === 'WELFARE_OFFICER'
       );
 
     default:

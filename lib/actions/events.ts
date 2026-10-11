@@ -16,8 +16,11 @@ export async function createEventAction(prevState: unknown, formData: FormData) 
   const eventType = formData.get('eventType') as EventType;
   const startTime = formData.get('startTime') as string;
   const endTime = (formData.get('endTime') as string) || null;
+  const callTime = (formData.get('callTime') as string)?.trim() || null;
+  const attireNotes = (formData.get('attireNotes') as string)?.trim() || null;
   const location = (formData.get('location') as string)?.trim();
   const description = (formData.get('description') as string)?.trim() || null;
+  const targetWing = (formData.get('targetWing') as string)?.trim() || null;
   const rsvpDeadline = (formData.get('rsvpDeadline') as string) || null;
 
   if (!title || !eventType || !startTime || !location) {
@@ -30,10 +33,10 @@ export async function createEventAction(prevState: unknown, formData: FormData) 
 
   db.prepare(`
     INSERT INTO events (
-      id, title, event_type, start_time, end_time, location, description,
+      id, title, event_type, target_wing, start_time, end_time, call_time, attire_notes, location, description,
       organizer_id, rsvp_deadline, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED', ?, ?)
-  `).run(id, title, eventType, startTime, endTime, location, description, actor.id, rsvpDeadline, now, now);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED', ?, ?)
+  `).run(id, title, eventType, targetWing === 'ALL' ? null : targetWing, startTime, endTime, callTime, attireNotes, location, description, actor.id, rsvpDeadline, now, now);
 
   logAudit({
     actorId: actor.id,
@@ -41,12 +44,49 @@ export async function createEventAction(prevState: unknown, formData: FormData) 
     action: 'CREATE_EVENT',
     entityType: 'EVENT',
     entityId: id,
-    details: { title, eventType, startTime, location },
+    details: { title, eventType, targetWing, startTime, callTime, attireNotes, location },
   });
 
   revalidatePath('/events');
   revalidatePath('/dashboard');
   return { success: `Event "${title}" scheduled successfully.` };
+}
+
+export async function updateEventAttireAction(prevState: unknown, formData: FormData) {
+  const actor = await getCurrentUser();
+  if (!actor || !hasPermission(actor.role, 'MANAGE_EVENTS')) {
+    return { error: 'Unauthorized: You do not have permission to update program attire.' };
+  }
+
+  const eventId = formData.get('eventId') as string;
+  const attireNotes = (formData.get('attireNotes') as string)?.trim() || null;
+  const callTime = (formData.get('callTime') as string)?.trim() || null;
+
+  if (!eventId) {
+    return { error: 'Event identifier is required.' };
+  }
+
+  const db = getDb();
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE events
+    SET attire_notes = ?, call_time = ?, updated_at = ?
+    WHERE id = ?
+  `).run(attireNotes, callTime, now, eventId);
+
+  logAudit({
+    actorId: actor.id,
+    actorName: actor.full_name,
+    action: 'UPDATE_EVENT_ATTIRE',
+    entityType: 'EVENT',
+    entityId: eventId,
+    details: { attireNotes, callTime },
+  });
+
+  revalidatePath('/events');
+  revalidatePath('/dashboard');
+  return { success: 'Program uniform & call time updated successfully.' };
 }
 
 export async function cancelEventAction(eventId: string) {

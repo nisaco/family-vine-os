@@ -13,8 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
   full_name TEXT NOT NULL,
   preferred_name TEXT,
   phone TEXT,
-  voice_part TEXT,
-  role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'MEMBER')),
+  wing TEXT, -- 'Family of Praise' (Choir), 'Asaphites' (Instrumentalists), 'Vimmies' (Dancers), 'General Leadership'
+  wing_role TEXT, -- Voice part, Instrument, or Dance specialty
+  voice_part TEXT, -- Legacy voice part compatibility
+  role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'MEMBER')),
   status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
   address TEXT,
   emergency_contact_name TEXT,
@@ -44,9 +46,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE TABLE IF NOT EXISTS events (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  event_type TEXT NOT NULL CHECK(event_type IN ('REHEARSAL', 'SERVICE', 'CONCERT', 'OFFICER_MEETING', 'GENERAL_MEETING', 'SPECIAL')),
+  event_type TEXT NOT NULL,
+  target_wing TEXT, -- 'Family of Praise', 'Asaphites', 'Vimmies', or NULL for All
   start_time TEXT NOT NULL,
   end_time TEXT,
+  call_time TEXT,
+  attire_notes TEXT,
   location TEXT NOT NULL,
   description TEXT,
   organizer_id TEXT REFERENCES users(id),
@@ -130,7 +135,7 @@ CREATE TABLE IF NOT EXISTS announcements (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  target_audience TEXT NOT NULL DEFAULT 'ALL' CHECK(target_audience IN ('ALL', 'OFFICERS', 'SOPRANO', 'ALTO', 'TENOR', 'BASS')),
+  target_audience TEXT NOT NULL DEFAULT 'ALL',
   is_pinned INTEGER NOT NULL DEFAULT 0,
   is_archived INTEGER NOT NULL DEFAULT 0,
   publish_at TEXT NOT NULL,
@@ -146,7 +151,7 @@ CREATE INDEX IF NOT EXISTS idx_announcements_audience ON announcements(target_au
 CREATE TABLE IF NOT EXISTS meetings (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  meeting_type TEXT NOT NULL CHECK(meeting_type IN ('OFFICER_MEETING', 'GENERAL_MEETING', 'SECTIONAL')),
+  meeting_type TEXT NOT NULL,
   date TEXT NOT NULL,
   location TEXT,
   minutes TEXT NOT NULL,
@@ -178,8 +183,8 @@ CREATE TABLE IF NOT EXISTS songs (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   composer_or_arranger TEXT,
-  voicing TEXT CHECK(voicing IN ('SATB', 'SSA', 'TTBB', 'UNISON', 'SOLO_CHOIR', 'OTHER')),
-  category TEXT CHECK(category IN ('HYMN', 'ANTHEM', 'PRAISE', 'WORSHIP', 'CHRISTMAS', 'EASTER', 'SPIRITUAL', 'CONTEMPORARY', 'OTHER')),
+  voicing TEXT,
+  category TEXT,
   key_signature TEXT,
   tempo TEXT,
   lyrics_or_scripture TEXT,
@@ -196,10 +201,11 @@ CREATE INDEX IF NOT EXISTS idx_songs_voicing ON songs(voicing);
 CREATE TABLE IF NOT EXISTS song_resources (
   id TEXT PRIMARY KEY,
   song_id TEXT NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-  resource_type TEXT NOT NULL CHECK(resource_type IN ('SHEET_MUSIC_LINK', 'AUDIO_REHEARSAL_LINK', 'VIDEO_PERFORMANCE_LINK', 'DOC_LINK')),
+  resource_type TEXT NOT NULL,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
-  voice_part TEXT CHECK(voice_part IN ('ALL', 'SOPRANO', 'ALTO', 'TENOR', 'BASS')),
+  voice_part TEXT,
+  target_wing TEXT, -- 'Family of Praise', 'Asaphites', 'Vimmies', 'ALL'
   created_at TEXT NOT NULL
 );
 
@@ -220,3 +226,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_type, entity_id);
 
+CREATE INDEX IF NOT EXISTS idx_users_wing ON users(wing);
+CREATE INDEX IF NOT EXISTS idx_events_wing ON events(target_wing);
+CREATE INDEX IF NOT EXISTS idx_song_resources_target_wing ON song_resources(target_wing);

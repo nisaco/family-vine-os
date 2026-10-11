@@ -10,6 +10,9 @@ export function getDatabasePath(): string {
     if (process.env.DATABASE_PATH === ':memory:') {
       return ':memory:';
     }
+    if (path.isAbsolute(process.env.DATABASE_PATH)) {
+      return process.env.DATABASE_PATH;
+    }
     return path.resolve(process.cwd(), process.env.DATABASE_PATH);
   }
   return path.resolve(process.cwd(), 'data', 'family_vine.db');

@@ -60,6 +60,7 @@ export async function addSongResourceAction(prevState: unknown, formData: FormDa
   const title = (formData.get('title') as string)?.trim();
   const url = (formData.get('url') as string)?.trim();
   const voicePart = (formData.get('voicePart') as string) || 'ALL';
+  const targetWing = (formData.get('targetWing') as string) || 'ALL';
 
   if (!songId || !title || !url) {
     return { error: 'Song ID, resource label, and URL link are required.' };
@@ -75,9 +76,9 @@ export async function addSongResourceAction(prevState: unknown, formData: FormDa
   const now = new Date().toISOString();
 
   db.prepare(`
-    INSERT INTO song_resources (id, song_id, resource_type, title, url, voice_part, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, songId, resourceType, title, url, voicePart, now);
+    INSERT INTO song_resources (id, song_id, resource_type, title, url, voice_part, target_wing, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, songId, resourceType, title, url, voicePart, targetWing, now);
 
   revalidatePath('/songs');
   return { success: 'Resource link attached successfully.' };

@@ -91,6 +91,39 @@ export function AnnouncementsClient({
           </button>
           <button
             type="button"
+            onClick={() => setFilterAudience('FAMILY_OF_PRAISE')}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              filterAudience === 'FAMILY_OF_PRAISE'
+                ? 'bg-rose-800 text-white font-semibold'
+                : 'text-stone-600 hover:bg-stone-100'
+            }`}
+          >
+            Family of Praise
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterAudience('ASAPHITES')}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              filterAudience === 'ASAPHITES'
+                ? 'bg-amber-800 text-white font-semibold'
+                : 'text-stone-600 hover:bg-stone-100'
+            }`}
+          >
+            Asaphites
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterAudience('VIMMIES')}
+            className={`px-3 py-1.5 rounded-md transition-all ${
+              filterAudience === 'VIMMIES'
+                ? 'bg-purple-800 text-white font-semibold'
+                : 'text-stone-600 hover:bg-stone-100'
+            }`}
+          >
+            Vimmies
+          </button>
+          <button
+            type="button"
             onClick={() => setFilterAudience('SOPRANO')}
             className={`px-3 py-1.5 rounded-md transition-all ${
               filterAudience === 'SOPRANO'
@@ -244,8 +277,11 @@ export function AnnouncementsClient({
               name="targetAudience"
               className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
             >
-              <option value="ALL">Entire Choir (All Choristers)</option>
+              <option value="ALL">Entire Ministry (All Wings)</option>
               <option value="OFFICERS">Executive Officers Only</option>
+              <option value="FAMILY_OF_PRAISE">Family of Praise (Choir)</option>
+              <option value="ASAPHITES">Asaphites (Instrumentalists)</option>
+              <option value="VIMMIES">Vimmies (Dancers)</option>
               <option value="SOPRANO">Soprano Section Only</option>
               <option value="ALTO">Alto Section Only</option>
               <option value="TENOR">Tenor Section Only</option>

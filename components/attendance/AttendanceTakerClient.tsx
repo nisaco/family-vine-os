@@ -39,6 +39,7 @@ export function AttendanceTakerClient({
 }: AttendanceTakerClientProps) {
   const [selectedEventId, setSelectedEventId] = useState(initialEventId);
   const [searchTerm, setSearchTerm] = useState('');
+  const [wingFilter, setWingFilter] = useState('ALL');
   const [voicePartFilter, setVoicePartFilter] = useState('ALL');
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
@@ -61,10 +62,13 @@ export function AttendanceTakerClient({
     if (m.status !== 'ACTIVE') return false;
     const matchesSearch =
       m.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (m.voice_part && m.voice_part.toLowerCase().includes(searchTerm.toLowerCase()));
+      (m.voice_part && m.voice_part.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (m.wing_role && m.wing_role.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesWing =
+      wingFilter === 'ALL' || m.wing === wingFilter;
     const matchesVoice =
-      voicePartFilter === 'ALL' || m.voice_part === voicePartFilter;
-    return matchesSearch && matchesVoice;
+      voicePartFilter === 'ALL' || m.voice_part === voicePartFilter || m.wing_role === voicePartFilter;
+    return matchesSearch && matchesWing && matchesVoice;
   });
 
   const handleSetStatus = async (userId: string, status: AttendanceStatus) => {
@@ -187,18 +191,18 @@ export function AttendanceTakerClient({
           />
         </div>
 
-        <select
-          value={voicePartFilter}
-          onChange={(e) => setVoicePartFilter(e.target.value)}
-          className="px-3 py-2 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
-        >
-          <option value="ALL">All Sections ({filteredMembers.length})</option>
-          <option value="Soprano">Soprano</option>
-          <option value="Alto">Alto</option>
-          <option value="Tenor">Tenor</option>
-          <option value="Bass">Bass</option>
-          <option value="Musician">Musician</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={wingFilter}
+            onChange={(e) => setWingFilter(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
+          >
+            <option value="ALL">All Wings</option>
+            <option value="Family of Praise">Family of Praise (Choir)</option>
+            <option value="Asaphites">Asaphites (Band)</option>
+            <option value="Vimmies">Vimmies (Dancers)</option>
+          </select>
+        </div>
       </div>
 
       {/* Mobile-Friendly One-Tap Attendance Roster Table */}
@@ -241,7 +245,7 @@ export function AttendanceTakerClient({
                       )}
                     </div>
                     <span className="text-xs text-stone-500">
-                      {member.voice_part || 'General'}
+                      {member.wing ? `${member.wing} • ` : ''}{member.wing_role || member.voice_part || 'Member'}
                     </span>
                     {currentRecord?.notes && (
                       <span className="block text-[11px] text-stone-600 italic">

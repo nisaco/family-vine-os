@@ -46,6 +46,16 @@ describe('Role-Based Permissions Matrix', () => {
     expect(hasPermission('GENERAL_SECRETARY', 'CREATE_FINANCE_EXPENSE')).toBe(false);
   });
 
+  it('permits Welfare Officer to manage events and announcements, but restricts financial mutations and user administration', () => {
+    expect(hasPermission('WELFARE_OFFICER', 'MANAGE_EVENTS')).toBe(true);
+    expect(hasPermission('WELFARE_OFFICER', 'MANAGE_ANNOUNCEMENTS')).toBe(true);
+    expect(hasPermission('WELFARE_OFFICER', 'VIEW_ALL_FINANCE')).toBe(false);
+    expect(hasPermission('WELFARE_OFFICER', 'CREATE_FINANCE_INCOME')).toBe(false);
+    expect(hasPermission('WELFARE_OFFICER', 'CREATE_FINANCE_EXPENSE')).toBe(false);
+    expect(hasPermission('WELFARE_OFFICER', 'MANAGE_USERS')).toBe(false);
+    expect(hasPermission('WELFARE_OFFICER', 'MANAGE_SETTINGS')).toBe(false);
+  });
+
   it('strictly restricts regular Members from leadership actions', () => {
     expect(hasPermission('MEMBER', 'VIEW_ALL_FINANCE')).toBe(false);
     expect(hasPermission('MEMBER', 'CREATE_FINANCE_INCOME')).toBe(false);
@@ -68,6 +78,8 @@ describe('Member Privacy Boundary and Field Sanitization', () => {
     full_name: 'Jane Doe',
     preferred_name: 'Jane',
     phone: '+1 555-9999',
+    wing: 'Family of Praise',
+    wing_role: 'Alto Chorister',
     voice_part: 'Alto',
     role: 'MEMBER',
     status: 'ACTIVE',

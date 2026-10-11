@@ -183,6 +183,12 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
                             {res.resource_type === 'SHEET_MUSIC_LINK' && (
                               <FileText className="w-3.5 h-3.5 text-choir-700 flex-shrink-0" />
                             )}
+                            {res.resource_type === 'CHORD_CHART_LINK' && (
+                              <Music className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                            )}
+                            {res.resource_type === 'DANCE_CHOREO_LINK' && (
+                              <Video className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                            )}
                             {res.resource_type === 'AUDIO_REHEARSAL_LINK' && (
                               <Headphones className="w-3.5 h-3.5 text-gold-700 flex-shrink-0" />
                             )}
@@ -195,6 +201,19 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
                             <span className="truncate">{res.title}</span>
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {res.target_wing && res.target_wing !== 'ALL' && (
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                res.target_wing === 'Family of Praise'
+                                  ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                                  : res.target_wing === 'Asaphites'
+                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                  : res.target_wing === 'Vimmies'
+                                  ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                                  : 'bg-stone-50 text-stone-700'
+                              }`}>
+                                {res.target_wing}
+                              </span>
+                            )}
                             {res.voice_part && res.voice_part !== 'ALL' && (
                               <Badge size="sm" variant="info">
                                 {res.voice_part}
@@ -353,29 +372,49 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
                 className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
               >
                 <option value="SHEET_MUSIC_LINK">Sheet Music (PDF / IMSLP Link)</option>
+                <option value="CHORD_CHART_LINK">Band Chord Chart / Lead Sheet (Asaphites)</option>
+                <option value="DANCE_CHOREO_LINK">Choreography Video / Dance Routine (Vimmies)</option>
                 <option value="AUDIO_REHEARSAL_LINK">Practice Audio Track (MP3 / Audio URL)</option>
                 <option value="VIDEO_PERFORMANCE_LINK">Video Recording (YouTube / Vimeo)</option>
                 <option value="DOC_LINK">Document / Program Notes</option>
               </select>
             </div>
 
-            <Input label="Resource Label *" name="title" required placeholder="e.g. Tenor Part Rehearsal Stem" />
+            <Input label="Resource Label *" name="title" required placeholder="e.g. Band Chord Progression & Rhythm Chart" />
             <Input label="Resource URL *" name="url" required type="url" placeholder="https://..." helperText="Must be a valid web link starting with https://" />
 
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
-                Section / Voice Part Specific
-              </label>
-              <select
-                name="voicePart"
-                className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
-              >
-                <option value="ALL">All Sections (Full Choir)</option>
-                <option value="SOPRANO">Soprano Only</option>
-                <option value="ALTO">Alto Only</option>
-                <option value="TENOR">Tenor Only</option>
-                <option value="BASS">Bass Only</option>
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                  Target Ministry Wing
+                </label>
+                <select
+                  name="targetWing"
+                  defaultValue="ALL"
+                  className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
+                >
+                  <option value="ALL">All Wings</option>
+                  <option value="Family of Praise">Family of Praise (Choir)</option>
+                  <option value="Asaphites">Asaphites (Band)</option>
+                  <option value="Vimmies">Vimmies (Dancers)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1">
+                  Voice Part (If Choir)
+                </label>
+                <select
+                  name="voicePart"
+                  className="w-full px-3 py-2 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700"
+                >
+                  <option value="ALL">All Parts / Not Applicable</option>
+                  <option value="SOPRANO">Soprano Only</option>
+                  <option value="ALTO">Alto Only</option>
+                  <option value="TENOR">Tenor Only</option>
+                  <option value="BASS">Bass Only</option>
+                </select>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 pt-2">

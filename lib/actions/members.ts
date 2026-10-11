@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { getDb } from '@/lib/db';
 import { getCurrentUser, hasPermission, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
-import type { UserRole, VoicePart, UserStatus } from '@/lib/types';
+import type { UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
 
 export async function createMemberAction(prevState: unknown, formData: FormData) {
   const actor = await getCurrentUser();
@@ -15,13 +15,16 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
   const fullName = (formData.get('fullName') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const phone = (formData.get('phone') as string)?.trim() || null;
-  const voicePart = (formData.get('voicePart') as VoicePart) || 'General';
+  const wing = (formData.get('wing') as MinistryWing) || 'Family of Praise';
+  const wingRole = (formData.get('wingRole') as string)?.trim() || (formData.get('voicePart') as string) || 'Member';
+  const voicePart = (formData.get('voicePart') as VoicePart) || (wing === 'Family of Praise' ? (wingRole as VoicePart) : null);
   const role = (formData.get('role') as UserRole) || 'MEMBER';
   const temporaryPassword = (formData.get('temporaryPassword') as string) || 'Choir2026!';
   const officerNotes = (formData.get('officerNotes') as string)?.trim() || null;
   const address = (formData.get('address') as string)?.trim() || null;
   const emergencyName = (formData.get('emergencyContactName') as string)?.trim() || null;
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
+  const birthDate = (formData.get('birthDate') as string)?.trim() || null;
 
   if (!fullName || !email) {
     return { error: 'Member full name and email are required.' };
@@ -44,10 +47,10 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
 
   db.prepare(`
     INSERT INTO users (
-      id, email, password_hash, full_name, preferred_name, phone, voice_part,
+      id, email, password_hash, full_name, preferred_name, phone, wing, wing_role, voice_part,
       role, status, address, emergency_contact_name, emergency_contact_phone,
-      officer_notes, join_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      officer_notes, birth_date, join_date, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     email,
@@ -55,6 +58,8 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
     fullName,
     fullName.split(' ')[0],
     phone,
+    wing,
+    wingRole,
     voicePart,
     role,
     'ACTIVE',
@@ -62,6 +67,7 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
     emergencyName,
     emergencyPhone,
     officerNotes,
+    birthDate,
     now.slice(0, 10),
     now,
     now
@@ -73,7 +79,7 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
     action: 'CREATE_MEMBER',
     entityType: 'USER',
     entityId: id,
-    details: { fullName, email, role, voicePart },
+    details: { fullName, email, role, wing, wingRole },
   });
 
   revalidatePath('/directory');
@@ -90,12 +96,15 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   const fullName = (formData.get('fullName') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const phone = (formData.get('phone') as string)?.trim() || null;
-  const voicePart = (formData.get('voicePart') as VoicePart) || null;
+  const wing = (formData.get('wing') as MinistryWing) || 'Family of Praise';
+  const wingRole = (formData.get('wingRole') as string)?.trim() || (formData.get('voicePart') as string) || 'Member';
+  const voicePart = (formData.get('voicePart') as VoicePart) || (wing === 'Family of Praise' ? (wingRole as VoicePart) : null);
   const role = formData.get('role') as UserRole;
   const officerNotes = (formData.get('officerNotes') as string)?.trim() || null;
   const address = (formData.get('address') as string)?.trim() || null;
   const emergencyName = (formData.get('emergencyContactName') as string)?.trim() || null;
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
+  const birthDate = (formData.get('birthDate') as string)?.trim() || null;
 
   if (!memberId || !fullName || !email) {
     return { error: 'Member ID, name, and email are required.' };
@@ -122,15 +131,18 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
       full_name = ?,
       email = ?,
       phone = ?,
+      wing = ?,
+      wing_role = ?,
       voice_part = ?,
       role = ?,
       officer_notes = ?,
+      birth_date = ?,
       address = ?,
       emergency_contact_name = ?,
       emergency_contact_phone = ?,
       updated_at = ?
     WHERE id = ?
-  `).run(fullName, email, phone, voicePart, updatedRole, officerNotes, address, emergencyName, emergencyPhone, now, memberId);
+  `).run(fullName, email, phone, wing, wingRole, voicePart, updatedRole, officerNotes, birthDate, address, emergencyName, emergencyPhone, now, memberId);
 
   logAudit({
     actorId: actor.id,
@@ -138,7 +150,7 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
     action: 'UPDATE_MEMBER',
     entityType: 'USER',
     entityId: memberId,
-    details: { fullName, email, role: updatedRole },
+    details: { fullName, email, role: updatedRole, wing, wingRole },
   });
 
   revalidatePath('/directory');

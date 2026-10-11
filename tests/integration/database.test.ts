@@ -179,4 +179,25 @@ describe('Database Schema, Constraints and Business Rules', () => {
     expect(logs[0].action).toBe('TRANSACTION_POSTED');
     expect(JSON.parse(logs[0].details).receipt).toBe('REC-2026-0001');
   });
+
+  it('supports WELFARE_OFFICER role and event call_time/attire_notes fields', () => {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO users (id, email, password_hash, full_name, role, status, join_date, birth_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('u_welfare', 'welfare@choir.org', 'hash', 'Sister Beatrice', 'WELFARE_OFFICER', 'ACTIVE', '2026-01-01', '1992-06-18', now, now);
+
+    const user = db.prepare('SELECT role, birth_date FROM users WHERE id = ?').get('u_welfare') as { role: string; birth_date: string };
+    expect(user.role).toBe('WELFARE_OFFICER');
+    expect(user.birth_date).toBe('1992-06-18');
+
+    db.prepare(`
+      INSERT INTO events (id, title, event_type, start_time, call_time, location, attire_notes, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('e_attire', 'Lord of All Retreat', 'CONCERT', now, '05:45 AM', 'Auditorium', 'Family of Praise: White choir robes with gold stoles', 'SCHEDULED', now, now);
+
+    const event = db.prepare('SELECT call_time, attire_notes FROM events WHERE id = ?').get('e_attire') as { call_time: string; attire_notes: string };
+    expect(event.call_time).toBe('05:45 AM');
+    expect(event.attire_notes).toContain('White choir robes');
+  });
 });

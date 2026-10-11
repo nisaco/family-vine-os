@@ -4,17 +4,24 @@ export type UserRole =
   | 'GENERAL_SECRETARY'
   | 'FINANCIAL_SECRETARY'
   | 'TREASURER'
+  | 'WELFARE_OFFICER'
   | 'MEMBER';
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+
+export type MinistryWing =
+  | 'Family of Praise' // The Choir
+  | 'Asaphites' // The Instrumentalists
+  | 'Vimmies' // The Dancers
+  | 'General Leadership';
 
 export type VoicePart =
   | 'Soprano'
   | 'Alto'
   | 'Tenor'
   | 'Bass'
+  | 'Choir Director'
   | 'Musician'
-  | 'Director'
   | 'General';
 
 export interface User {
@@ -24,6 +31,8 @@ export interface User {
   full_name: string;
   preferred_name: string | null;
   phone: string | null;
+  wing: MinistryWing | null;
+  wing_role: string | null;
   voice_part: VoicePart | null;
   role: UserRole;
   status: UserStatus;
@@ -55,6 +64,9 @@ export interface Session {
 
 export type EventType =
   | 'REHEARSAL'
+  | 'CHOIR_REHEARSAL'
+  | 'BAND_PRACTICE'
+  | 'DANCE_PRACTICE'
   | 'SERVICE'
   | 'CONCERT'
   | 'OFFICER_MEETING'
@@ -67,8 +79,11 @@ export interface ChoirEvent {
   id: string;
   title: string;
   event_type: EventType;
+  target_wing: string | null;
   start_time: string;
   end_time: string | null;
+  call_time?: string | null;
+  attire_notes?: string | null;
   location: string;
   description: string | null;
   organizer_id: string | null;
@@ -89,6 +104,8 @@ export interface EventRsvp {
   created_at: string;
   updated_at: string;
   user_name?: string;
+  wing?: string;
+  wing_role?: string;
   voice_part?: string;
 }
 
@@ -104,6 +121,8 @@ export interface AttendanceRecord {
   created_at: string;
   updated_at: string;
   user_name?: string;
+  wing?: string;
+  wing_role?: string;
   voice_part?: string;
 }
 
@@ -147,7 +166,16 @@ export interface FinancialTransaction {
   updated_at: string;
 }
 
-export type AnnouncementAudience = 'ALL' | 'OFFICERS' | 'SOPRANO' | 'ALTO' | 'TENOR' | 'BASS';
+export type AnnouncementAudience =
+  | 'ALL'
+  | 'OFFICERS'
+  | 'FAMILY_OF_PRAISE'
+  | 'ASAPHITES'
+  | 'VIMMIES'
+  | 'SOPRANO'
+  | 'ALTO'
+  | 'TENOR'
+  | 'BASS';
 
 export interface Announcement {
   id: string;
@@ -164,7 +192,7 @@ export interface Announcement {
   updated_at: string;
 }
 
-export type MeetingType = 'OFFICER_MEETING' | 'GENERAL_MEETING' | 'SECTIONAL';
+export type MeetingType = 'OFFICER_MEETING' | 'GENERAL_MEETING' | 'SECTIONAL' | 'WING_MEETING';
 
 export interface Meeting {
   id: string;
@@ -199,7 +227,13 @@ export interface ActionItem {
 
 export type Voicing = 'SATB' | 'SSA' | 'TTBB' | 'UNISON' | 'SOLO_CHOIR' | 'OTHER';
 export type SongCategory = 'HYMN' | 'ANTHEM' | 'PRAISE' | 'WORSHIP' | 'CHRISTMAS' | 'EASTER' | 'SPIRITUAL' | 'CONTEMPORARY' | 'OTHER';
-export type ResourceType = 'SHEET_MUSIC_LINK' | 'AUDIO_REHEARSAL_LINK' | 'VIDEO_PERFORMANCE_LINK' | 'DOC_LINK';
+export type ResourceType =
+  | 'SHEET_MUSIC_LINK'
+  | 'AUDIO_REHEARSAL_LINK'
+  | 'CHORD_CHART_LINK'
+  | 'DANCE_CHOREO_LINK'
+  | 'VIDEO_PERFORMANCE_LINK'
+  | 'DOC_LINK';
 
 export interface SongResource {
   id: string;
@@ -208,6 +242,7 @@ export interface SongResource {
   title: string;
   url: string;
   voice_part: 'ALL' | 'SOPRANO' | 'ALTO' | 'TENOR' | 'BASS' | null;
+  target_wing: 'ALL' | 'Family of Praise' | 'Asaphites' | 'Vimmies' | null;
   created_at: string;
 }
 
@@ -251,4 +286,3 @@ export interface ChoirSettings {
   standard_monthly_dues_cents: number;
   allow_member_birthday_view: boolean;
 }
-
