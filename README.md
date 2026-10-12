@@ -96,6 +96,17 @@ PORT=3000
 NODE_ENV=development
 ```
 
+### Production database persistence on Render
+
+Administrator accounts and choir data are stored in the SQLite database, not on an individual device. The first-administrator setup is only for an empty database. After setup, every device using the same deployed URL should sign in with the same administrator account; each device has its own session cookie.
+
+Render must use a persistent disk for the database. The included `render.yaml` configures:
+
+- `DATABASE_PATH=/var/data/family_vine.db`
+- A persistent disk mounted at `/var/data`
+
+For an existing Render web service, confirm those settings in the service dashboard. A manually created service does not automatically inherit later changes to `render.yaml`; sync the Blueprint or attach the disk and set the environment variable in the dashboard. Do not delete or replace the disk when deploying. If setup appears again on the same deployed URL, verify that the service is using the existing disk and database before initializing another account. A database on Render's temporary filesystem can be lost on redeploy, which also removes its users and choir data.
+
 ### 4. Database Migrations
 Migrations run automatically upon first database connection, creating all tables, indexes, default categories, and choir settings.
 

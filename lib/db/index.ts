@@ -8,6 +8,11 @@ let dbInstance: Database.Database | null = null;
 export function getDatabasePath(): string {
   if (process.env.DATABASE_PATH) {
     if (process.env.DATABASE_PATH === ':memory:') {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'DATABASE_PATH must point to persistent storage in production; in-memory databases are not supported.'
+        );
+      }
       return ':memory:';
     }
     if (path.isAbsolute(process.env.DATABASE_PATH)) {
@@ -15,6 +20,13 @@ export function getDatabasePath(): string {
     }
     return path.resolve(process.cwd(), process.env.DATABASE_PATH);
   }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'DATABASE_PATH must be configured in production and point to persistent storage.'
+    );
+  }
+
   return path.resolve(process.cwd(), 'data', 'family_vine.db');
 }
 
@@ -35,6 +47,11 @@ export function getDb(customPath?: string): Database.Database {
   if (targetPath !== ':memory:') {
     const dir = path.dirname(targetPath);
     if (!fs.existsSync(dir)) {
+      if (!customPath && process.env.NODE_ENV === 'production') {
+        throw new Error(
+          `Database directory "${dir}" does not exist. Mount persistent storage there before starting the production app.`
+        );
+      }
       fs.mkdirSync(dir, { recursive: true });
     }
   }

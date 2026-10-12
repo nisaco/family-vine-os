@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { runMigrations } from '@/lib/db/migrate';
 import { isFirstAdminNeeded } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
+import { getDatabasePath, getDb } from '@/lib/db';
 
 describe('Database Schema, Constraints and Business Rules', () => {
   let db: Database.Database;
@@ -38,6 +42,53 @@ describe('Database Schema, Constraints and Business Rules', () => {
     `).run('u1', 'admin@choir.org', 'hash', 'Admin User', 'ADMIN', 'ACTIVE', '2026-01-01', now, now);
 
     expect(isFirstAdminNeeded(db)).toBe(false);
+  });
+
+  it('requires an explicit database path in production', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalDatabasePath = process.env.DATABASE_PATH;
+
+    process.env.NODE_ENV = 'production';
+    delete process.env.DATABASE_PATH;
+
+    try {
+      expect(() => getDatabasePath()).toThrow(/DATABASE_PATH.*persistent storage/);
+
+      process.env.DATABASE_PATH = ':memory:';
+      expect(() => getDatabasePath()).toThrow(/in-memory databases are not supported/);
+
+      process.env.DATABASE_PATH = './data/family_vine.db';
+      expect(getDatabasePath()).toBe(path.resolve(process.cwd(), 'data/family_vine.db'));
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+
+      if (originalDatabasePath === undefined) delete process.env.DATABASE_PATH;
+      else process.env.DATABASE_PATH = originalDatabasePath;
+    }
+  });
+
+  it('does not create a missing database directory in production', () => {
+    const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'family-vine-db-'));
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalDatabasePath = process.env.DATABASE_PATH;
+    const databaseDirectory = path.join(tempDirectory, 'mounted-disk');
+
+    process.env.NODE_ENV = 'production';
+    process.env.DATABASE_PATH = path.join(databaseDirectory, 'family_vine.db');
+
+    try {
+      expect(() => getDb()).toThrow(/Mount persistent storage/);
+      expect(fs.existsSync(databaseDirectory)).toBe(false);
+    } finally {
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+
+      if (originalDatabasePath === undefined) delete process.env.DATABASE_PATH;
+      else process.env.DATABASE_PATH = originalDatabasePath;
+
+      fs.rmdirSync(tempDirectory);
+    }
   });
 
   it('strictly enforces duplicate attendance prevention at database constraint level', () => {

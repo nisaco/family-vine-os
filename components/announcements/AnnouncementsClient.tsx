@@ -57,7 +57,7 @@ export function AnnouncementsClient({
         </div>
 
         {canManage && (
-          <Button onClick={() => setIsCreateOpen(true)} className="flex-shrink-0">
+          <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-1.5" />
             New Announcement
           </Button>
@@ -65,12 +65,12 @@ export function AnnouncementsClient({
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-white p-3 rounded-xl border border-stone-200/80 shadow-xs flex items-center justify-between">
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs font-medium">
+      <div className="bg-white p-3 rounded-xl border border-stone-200/80 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5 text-xs font-medium">
           <button
             type="button"
             onClick={() => setFilterAudience('ALL')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'ALL'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -81,7 +81,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('OFFICERS')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'OFFICERS'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -92,7 +92,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('FAMILY_OF_PRAISE')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'FAMILY_OF_PRAISE'
                 ? 'bg-rose-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -103,7 +103,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('ASAPHITES')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'ASAPHITES'
                 ? 'bg-amber-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -114,7 +114,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('VIMMIES')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'VIMMIES'
                 ? 'bg-purple-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -125,7 +125,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('SOPRANO')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'SOPRANO'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -136,7 +136,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('ALTO')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'ALTO'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -147,7 +147,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('TENOR')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'TENOR'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -158,7 +158,7 @@ export function AnnouncementsClient({
           <button
             type="button"
             onClick={() => setFilterAudience('BASS')}
-            className={`px-3 py-1.5 rounded-md transition-all ${
+            className={`min-h-9 px-3 py-1.5 rounded-md transition-all whitespace-nowrap ${
               filterAudience === 'BASS'
                 ? 'bg-choir-800 text-white font-semibold'
                 : 'text-stone-600 hover:bg-stone-100'
@@ -328,4 +328,3 @@ export function AnnouncementsClient({
     </div>
   );
 }
-

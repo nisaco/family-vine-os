@@ -145,25 +145,25 @@ export function FinanceClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
           <a
             href="/api/finance/export"
             download
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium rounded-lg border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 transition-colors shadow-xs"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-xs font-medium text-stone-700 shadow-xs transition-colors hover:bg-stone-50 sm:w-auto"
           >
             <Download className="w-4 h-4 text-stone-500" />
             <span>Export CSV</span>
           </a>
 
           {canCreateIncome && (
-            <Button size="sm" onClick={() => setIsIncomeOpen(true)}>
+            <Button size="sm" className="w-full sm:w-auto" onClick={() => setIsIncomeOpen(true)}>
               <PlusCircle className="w-4 h-4 mr-1.5" />
               Record Income / Dues
             </Button>
           )}
 
           {canCreateExpense && (
-            <Button size="sm" variant="outline" onClick={() => setIsExpenseOpen(true)}>
+            <Button size="sm" variant="outline" className="w-full sm:w-auto" onClick={() => setIsExpenseOpen(true)}>
               <TrendingDown className="w-4 h-4 mr-1.5 text-rose-700" />
               Record Expense
             </Button>
@@ -246,7 +246,7 @@ export function FinanceClient({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-stone-100 rounded-lg text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-stone-100 rounded-lg text-xs font-medium">
           <button
             type="button"
             onClick={() => setFilterType('ALL')}
@@ -674,4 +674,3 @@ export function FinanceClient({
     </div>
   );
 }
-

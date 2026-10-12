@@ -50,7 +50,7 @@ export function Modal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6"
     >
       {/* Backdrop */}
       <div
@@ -62,7 +62,7 @@ export function Modal({
       <div
         className={`relative w-full ${maxWidthStyles[maxWidth]} bg-white rounded-2xl shadow-xl border border-stone-200 overflow-hidden z-10 my-8`}
       >
-        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-stone-100">
+        <div className="flex items-start justify-between gap-4 border-b border-stone-100 px-4 py-4 sm:px-6 sm:py-5">
           <div>
             <h2 id="modal-title" className="text-lg font-semibold text-stone-900">
               {title}
@@ -80,9 +80,8 @@ export function Modal({
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
+        <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto p-4 sm:max-h-[80vh] sm:p-6">{children}</div>
       </div>
     </div>
   );
 }
-

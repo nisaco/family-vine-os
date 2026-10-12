@@ -137,7 +137,7 @@ export function DirectoryClient({
         </div>
 
         {canManageMembers && (
-          <Button onClick={() => setIsCreateOpen(true)} className="flex-shrink-0">
+          <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
             <UserPlus className="w-4 h-4 mr-1.5" />
             Add Member
           </Button>
@@ -157,11 +157,11 @@ export function DirectoryClient({
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+        <div className="flex flex-col sm:flex-row items-stretch gap-2">
           <select
             value={wingFilter}
             onChange={(e) => setWingFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
+            className="w-full min-w-0 sm:w-auto sm:flex-1 min-h-10 px-3 py-2 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
           >
             <option value="ALL">All Wings</option>
             <option value="Family of Praise">Family of Praise (Choir)</option>
@@ -173,7 +173,7 @@ export function DirectoryClient({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
+            className="w-full min-w-0 sm:w-auto sm:flex-1 min-h-10 px-3 py-2 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
           >
             <option value="ACTIVE">Active Only</option>
             <option value="INACTIVE">Deactivated</option>
@@ -702,4 +702,3 @@ export function DirectoryClient({
     </div>
   );
 }
-

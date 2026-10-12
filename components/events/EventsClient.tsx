@@ -90,7 +90,7 @@ export function EventsClient({
         </div>
 
         {canManageEvents && (
-          <Button onClick={() => setIsCreateOpen(true)} className="flex-shrink-0">
+          <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-1.5" />
             Schedule Event
           </Button>
@@ -99,7 +99,7 @@ export function EventsClient({
 
       {/* Filter and View Tabs */}
       <div className="bg-white p-3.5 rounded-xl border border-stone-200/80 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        <div className="flex items-center gap-1.5 p-1 bg-stone-100 rounded-lg text-xs font-medium">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-stone-100 rounded-lg text-xs font-medium">
           <button
             type="button"
             onClick={() => setViewMode('UPCOMING')}
@@ -135,11 +135,11 @@ export function EventsClient({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch gap-2">
           <select
             value={selectedWing}
             onChange={(e) => setSelectedWing(e.target.value)}
-            className="px-3 py-1.5 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
+            className="w-full min-w-0 sm:w-auto sm:flex-1 min-h-10 px-3 py-1.5 text-xs font-semibold bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-800"
           >
             <option value="ALL">All Wings</option>
             <option value="Family of Praise">Family of Praise (Choir)</option>
@@ -150,7 +150,7 @@ export function EventsClient({
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-1.5 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
+            className="w-full min-w-0 sm:w-auto sm:flex-1 min-h-10 px-3 py-1.5 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
           >
             <option value="ALL">All Event Types</option>
             <option value="CHOIR_REHEARSAL">Choir Rehearsal</option>
@@ -553,4 +553,3 @@ export function EventsClient({
     </div>
   );
 }
-

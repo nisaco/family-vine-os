@@ -68,7 +68,7 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
         </div>
 
         {canManageSongs && (
-          <Button onClick={() => setIsNewSongOpen(true)} className="flex-shrink-0">
+          <Button onClick={() => setIsNewSongOpen(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-1.5" />
             Add Choral Work
           </Button>
@@ -429,4 +429,3 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
     </div>
   );
 }
-
