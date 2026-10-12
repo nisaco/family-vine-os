@@ -104,8 +104,9 @@ Render must use a persistent disk for the database. The included `render.yaml` c
 
 - `DATABASE_PATH=/var/data/family_vine.db`
 - A persistent disk mounted at `/var/data`
+- `/setup` as the health check, so Render verifies the database is reachable instead of only checking the database-independent sign-in page
 
-For an existing Render web service, confirm those settings in the service dashboard. A manually created service does not automatically inherit later changes to `render.yaml`; sync the Blueprint or attach the disk and set the environment variable in the dashboard. Do not delete or replace the disk when deploying. If setup appears again on the same deployed URL, verify that the service is using the existing disk and database before initializing another account. A database on Render's temporary filesystem can be lost on redeploy, which also removes its users and choir data.
+For an existing Render web service, confirm those settings in the service dashboard. A manually created service does not automatically inherit later changes to `render.yaml`; sync the Blueprint or attach the disk and set the environment variable in the dashboard. The sign-in page can load even when the database is unavailable, so it is not a suitable health check. Do not delete or replace the disk when deploying. If setup appears again on the same deployed URL, verify that the service is using the existing disk and database before initializing another account. A database on Render's temporary filesystem can be lost on redeploy, which also removes its users and choir data.
 
 ### 4. Database Migrations
 Migrations run automatically upon first database connection, creating all tables, indexes, default categories, and choir settings.
@@ -182,4 +183,3 @@ npm run test:watch
 1. **Local File Storage vs. Cloud Storage**: Song resources currently support verified external URLs (IMSLP, Google Drive, ChoraLine, YouTube). Direct binary file upload to S3/Cloud Storage is left for deployment-specific configurations.
 2. **Financial Scope**: The application is an internal ledger and bookkeeping system; it does not connect directly to banking APIs or process credit card payments natively.
 3. **Email Notifications**: Outgoing SMTP integration for invitations and reminder alerts can be connected to standard providers using the audit log event triggers.
-
