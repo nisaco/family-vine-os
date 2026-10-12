@@ -22,9 +22,7 @@ export function getDatabasePath(): string {
   }
 
   if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'DATABASE_PATH must be configured in production and point to persistent storage.'
-    );
+    return '/var/data/family_vine.db';
   }
 
   return path.resolve(process.cwd(), 'data', 'family_vine.db');

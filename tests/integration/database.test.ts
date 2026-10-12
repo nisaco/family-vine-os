@@ -44,7 +44,7 @@ describe('Database Schema, Constraints and Business Rules', () => {
     expect(isFirstAdminNeeded(db)).toBe(false);
   });
 
-  it('requires an explicit database path in production', () => {
+  it('uses the Render persistent disk path by default in production', () => {
     const originalNodeEnv = process.env.NODE_ENV;
     const originalDatabasePath = process.env.DATABASE_PATH;
 
@@ -52,7 +52,7 @@ describe('Database Schema, Constraints and Business Rules', () => {
     delete process.env.DATABASE_PATH;
 
     try {
-      expect(() => getDatabasePath()).toThrow(/DATABASE_PATH.*persistent storage/);
+      expect(getDatabasePath()).toBe('/var/data/family_vine.db');
 
       process.env.DATABASE_PATH = ':memory:';
       expect(() => getDatabasePath()).toThrow(/in-memory databases are not supported/);

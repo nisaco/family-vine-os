@@ -4,6 +4,8 @@ import { isFirstAdminNeeded } from '@/lib/auth';
 import { SetupForm } from './SetupForm';
 import { ShieldCheck, ShieldAlert, Music } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function SetupPage() {
   const isNeeded = isFirstAdminNeeded();
 
