@@ -17,25 +17,24 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`bg-white border border-stone-200/80 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] overflow-hidden ${className}`}
+      className={`overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-[0_1px_3px_rgba(28,25,23,0.04)] ${className}`}
     >
       {(title || action) && (
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 border-b border-stone-100 px-5 py-4 sm:px-6">
           <div>
             {title && (
-              <h3 className="text-base font-semibold text-stone-900 leading-tight">
+              <h3 className="text-base font-semibold leading-snug text-stone-900">
                 {title}
               </h3>
             )}
             {subtitle && (
-              <p className="text-xs text-stone-500 mt-0.5">{subtitle}</p>
+              <p className="mt-1 text-sm text-stone-500">{subtitle}</p>
             )}
           </div>
-          {action && <div className="flex-shrink-0">{action}</div>}
+          {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-5 sm:p-6">{children}</div>
     </div>
   );
 }
-

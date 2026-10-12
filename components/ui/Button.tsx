@@ -21,9 +21,9 @@ export function Button({
     'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed select-none';
 
   const sizeStyles = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-5 py-2.5 text-base',
+    sm: 'min-h-9 px-3 py-1.5 text-xs',
+    md: 'min-h-10 px-4 py-2 text-sm',
+    lg: 'min-h-11 px-5 py-2.5 text-base',
   };
 
   const variantStyles = {
@@ -75,4 +75,3 @@ export function Button({
     </button>
   );
 }
-

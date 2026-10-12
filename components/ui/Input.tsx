@@ -8,13 +8,14 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, className = '', id, ...props }, ref) => {
-    const inputId = id || props.name || Math.random().toString(36).substring(7);
+    const generatedId = React.useId();
+    const inputId = id || props.name || generatedId;
 
     return (
       <div className="w-full">
         <label
           htmlFor={inputId}
-          className="block text-xs font-semibold uppercase tracking-wider text-stone-700 mb-1"
+          className="mb-1.5 block text-sm font-medium text-stone-700"
         >
           {label}
           {props.required && <span className="text-rose-600 ml-1">*</span>}
@@ -22,16 +23,16 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         <input
           id={inputId}
           ref={ref}
-          className={`w-full px-3.5 py-2 text-sm bg-white border rounded-lg text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-choir-700 transition-colors ${
+          className={`min-h-11 w-full rounded-lg border bg-white px-3.5 py-2.5 text-base text-stone-900 placeholder-stone-400 transition-colors focus:outline-none focus:ring-2 sm:text-sm ${
             error
               ? 'border-rose-400 focus:ring-rose-500'
-              : 'border-stone-300 hover:border-stone-400'
+              : 'border-stone-300 hover:border-stone-400 focus:border-choir-700 focus:ring-choir-700'
           } ${className}`}
           {...props}
         />
-        {error && <p className="text-xs text-rose-600 mt-1 font-medium">{error}</p>}
+        {error && <p className="mt-1 text-sm font-medium text-rose-700" role="alert">{error}</p>}
         {helperText && !error && (
-          <p className="text-xs text-stone-500 mt-1">{helperText}</p>
+          <p className="mt-1 text-sm text-stone-500">{helperText}</p>
         )}
       </div>
     );
@@ -39,4 +40,3 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

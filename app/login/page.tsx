@@ -5,7 +5,7 @@ import { useFormState } from 'react-dom';
 import { signInAction } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Shield, Music, UserCheck, KeyRound } from 'lucide-react';
+import { ChevronDown, KeyRound, Music } from 'lucide-react';
 
 export default function LoginPage() {
   const [state, formAction] = useFormState(signInAction, null);
@@ -18,9 +18,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfbf7] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#fdfbf7] flex flex-col justify-center py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-choir-900 text-gold-300 shadow-md mb-4 border border-choir-800">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-choir-900 text-gold-300 shadow-sm mb-4 border border-choir-800">
           <Music className="w-7 h-7" />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-stone-900 font-serif">
@@ -31,8 +31,8 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-6 shadow-sm border border-stone-200/90 rounded-2xl sm:px-10">
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-7 px-5 shadow-[0_8px_30px_rgba(41,37,36,0.06)] border border-stone-200/90 rounded-2xl sm:px-9 sm:py-8">
           <form action={formAction} className="space-y-5">
             {state?.error && (
               <div
@@ -70,18 +70,27 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          {/* Quick Demo Credentials Helper for Local Evaluation */}
-          <div className="mt-8 pt-6 border-t border-stone-200">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-700 uppercase tracking-wider">
+          <details className="group mt-6 border-t border-stone-200 pt-5">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg text-sm font-medium text-stone-700 transition-colors hover:text-choir-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-choir-700 [&::-webkit-details-marker]:hidden">
+              <span className="flex items-center gap-2">
                 <KeyRound className="w-3.5 h-3.5 text-gold-600" />
-                <span>Demo Evaluation Logins</span>
+                Demo sign-in accounts
+              </span>
+              <span className="flex items-center gap-2 text-xs text-stone-500">
+                For evaluation
+                <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+              </span>
+            </summary>
+            <div className="mt-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-600">
+                  Available profiles
+                </h2>
+                <span className="text-[11px] text-stone-500">Password: Password123!</span>
               </div>
-              <span className="text-[11px] text-stone-400 font-mono">Password123!</span>
-            </div>
-            <p className="text-xs text-stone-500 mb-3">
+              <p className="text-xs text-stone-500 mb-3">
               Click any profile to auto-fill credentials and test role-based permissions:
-            </p>
+              </p>
 
             {/* Directorate & Executive Officers */}
             <div className="mb-3">
@@ -195,6 +204,7 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
+          </details>
         </div>
 
         <div className="mt-6 text-center text-xs text-stone-500">
@@ -204,4 +214,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
