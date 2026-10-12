@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { Announcement, AnnouncementAudience, UserRole } from '@/lib/types';
 import { createAnnouncementAction, archiveAnnouncementAction } from '@/lib/actions/announcements';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { formatDateOnly } from '@/lib/utils/timezone';
@@ -26,6 +26,12 @@ export function AnnouncementsClient({
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filterAudience, setFilterAudience] = useState<string>('ALL');
   const [createState, createAction] = useFormState(createAnnouncementAction, null);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setIsCreateOpen(false);
+    }
+  }, [createState]);
 
   const canManage =
     currentUserRole === 'ADMIN' ||
@@ -254,13 +260,7 @@ export function AnnouncementsClient({
         title="Publish New Announcement"
         description="Broadcast official instructions or updates to choristers."
       >
-        <form
-          action={async (formData) => {
-            await createAction(formData);
-            setIsCreateOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={createAction} className="space-y-4">
           {createState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {createState.error}
@@ -321,7 +321,7 @@ export function AnnouncementsClient({
             <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Publish Notice</Button>
+            <SubmitButton loadingText="Publishing Notice...">Publish Notice</SubmitButton>
           </div>
         </form>
       </Modal>

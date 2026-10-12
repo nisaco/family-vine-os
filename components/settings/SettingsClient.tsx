@@ -6,7 +6,7 @@ import { ChoirSettings, AuditLog, UserRole } from '@/lib/types';
 import { updateSettingsAction } from '@/lib/actions/settings';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatCurrency } from '@/lib/utils/currency';
 import { formatDateTime, COMMON_TIMEZONES } from '@/lib/utils/timezone';
@@ -182,10 +182,10 @@ export function SettingsClient({
             </div>
 
             <div className="pt-3 border-t border-stone-100 flex justify-end">
-              <Button type="submit">
+              <SubmitButton loadingText="Applying Settings...">
                 <Save className="w-4 h-4 mr-1.5" />
                 Save Settings
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </Card>

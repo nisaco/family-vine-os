@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { SafeUser, UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
 import { createMemberAction, updateMemberAction, toggleMemberStatusAction } from '@/lib/actions/members';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import {
@@ -78,6 +78,18 @@ export function DirectoryClient({
 
   const [createState, createAction] = useFormState(createMemberAction, null);
   const [editState, editAction] = useFormState(updateMemberAction, null);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setIsCreateOpen(false);
+    }
+  }, [createState]);
+
+  useEffect(() => {
+    if (editState?.success) {
+      setIsEditOpen(false);
+    }
+  }, [editState]);
 
   const canManageMembers =
     currentUserRole === 'ADMIN' || currentUserRole === 'GENERAL_SECRETARY';
@@ -537,6 +549,7 @@ export function DirectoryClient({
             <Input
               label="Temporary Initial Password"
               name="temporaryPassword"
+              type="password"
               defaultValue="Choir2026!"
               helperText="Member can change this on profile."
             />
@@ -565,7 +578,7 @@ export function DirectoryClient({
             <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create Member</Button>
+            <SubmitButton loadingText="Creating Member...">Create Member</SubmitButton>
           </div>
         </form>
       </Modal>
@@ -577,14 +590,8 @@ export function DirectoryClient({
           onClose={() => setIsEditOpen(false)}
           title={`Edit Member: ${selectedMember.full_name}`}
         >
-          <form
-            action={async (formData) => {
-              formData.append('memberId', selectedMember.id);
-              await editAction(formData);
-              setIsEditOpen(false);
-            }}
-            className="space-y-4"
-          >
+          <form action={editAction} className="space-y-4">
+            <input type="hidden" name="memberId" value={selectedMember.id} />
             {editState?.error && (
               <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
                 {editState.error}
@@ -694,7 +701,7 @@ export function DirectoryClient({
               <Button type="button" variant="secondary" onClick={() => setIsEditOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Save Changes</Button>
+              <SubmitButton loadingText="Saving Changes...">Save Changes</SubmitButton>
             </div>
           </form>
         </Modal>

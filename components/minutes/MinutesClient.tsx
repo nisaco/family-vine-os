@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { Meeting, ActionItem, SafeUser, UserRole, ActionItemStatus, MeetingType } from '@/lib/types';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/lib/actions/meetings';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { formatDateOnly } from '@/lib/utils/timezone';
@@ -51,6 +51,18 @@ export function MinutesClient({
 
   const [meetingState, meetingAction] = useFormState(createMeetingAction, null);
   const [actionItemState, actionItemAction] = useFormState(createActionItemAction, null);
+
+  useEffect(() => {
+    if (meetingState?.success) {
+      setIsNewMeetingOpen(false);
+    }
+  }, [meetingState]);
+
+  useEffect(() => {
+    if (actionItemState?.success) {
+      setIsNewActionItemOpen(false);
+    }
+  }, [actionItemState]);
 
   const canManageMinutes =
     currentUserRole === 'ADMIN' || currentUserRole === 'GENERAL_SECRETARY';
@@ -342,13 +354,7 @@ export function MinutesClient({
         title="Record Meeting Minutes"
         description="Preserve meeting resolutions, decisions, and officer deliberations."
       >
-        <form
-          action={async (formData) => {
-            await meetingAction(formData);
-            setIsNewMeetingOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={meetingAction} className="space-y-4">
           {meetingState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {meetingState.error}
@@ -406,7 +412,7 @@ export function MinutesClient({
             <Button type="button" variant="secondary" onClick={() => setIsNewMeetingOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save Minutes</Button>
+            <SubmitButton loadingText="Saving Minutes...">Save Minutes</SubmitButton>
           </div>
         </form>
       </Modal>
@@ -418,13 +424,7 @@ export function MinutesClient({
         title="Assign Action Item"
         description="Assign a specific task or deliverable to a choir member or officer."
       >
-        <form
-          action={async (formData) => {
-            await actionItemAction(formData);
-            setIsNewActionItemOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={actionItemAction} className="space-y-4">
           {actionItemState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {actionItemState.error}
@@ -488,7 +488,7 @@ export function MinutesClient({
             <Button type="button" variant="secondary" onClick={() => setIsNewActionItemOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Assign Task</Button>
+            <SubmitButton loadingText="Assigning Task...">Assign Task</SubmitButton>
           </div>
         </form>
       </Modal>

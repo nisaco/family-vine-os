@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
+import { useFormStatus } from 'react-dom';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  loadingText?: string;
 }
 
 export function Button({
@@ -13,6 +15,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   isLoading = false,
+  loadingText,
   className = '',
   disabled,
   ...props
@@ -67,11 +70,35 @@ export function Button({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          <span>Processing...</span>
+          <span>{loadingText || 'Processing...'}</span>
         </span>
       ) : (
         children
       )}
     </button>
+  );
+}
+
+export interface SubmitButtonProps extends Omit<ButtonProps, 'type' | 'isLoading'> {
+  loadingText?: string;
+}
+
+export function SubmitButton({
+  children,
+  loadingText,
+  disabled,
+  ...props
+}: SubmitButtonProps) {
+  const { pending } = useFormStatus();
+  return (
+    <Button
+      type="submit"
+      isLoading={pending}
+      loadingText={loadingText}
+      disabled={disabled || pending}
+      {...props}
+    >
+      {children}
+    </Button>
   );
 }

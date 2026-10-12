@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import {
   FinancialTransaction,
@@ -17,7 +17,7 @@ import {
 } from '@/lib/actions/finance';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils/currency';
@@ -75,9 +75,22 @@ export function FinanceClient({
   const [voidingTx, setVoidingTx] = useState<FinancialTransaction | null>(null);
   const [voidReason, setVoidReason] = useState('');
   const [isVoiding, setIsVoiding] = useState(false);
+  const [isConfirmingVoid, setIsConfirmingVoid] = useState(false);
 
   const [incomeState, incomeAction] = useFormState(createIncomeTransactionAction, null);
   const [expenseState, expenseAction] = useFormState(createExpenseTransactionAction, null);
+
+  useEffect(() => {
+    if (incomeState?.success) {
+      setIsIncomeOpen(false);
+    }
+  }, [incomeState]);
+
+  useEffect(() => {
+    if (expenseState?.success) {
+      setIsExpenseOpen(false);
+    }
+  }, [expenseState]);
 
   const canCreateIncome =
     currentUserRole === 'ADMIN' ||
@@ -120,9 +133,14 @@ export function FinanceClient({
 
   const handleConfirmVoid = async () => {
     if (!voidingTx || !voidReason.trim()) return;
-    await voidOrReverseTransactionAction(voidingTx.id, voidReason.trim());
-    setIsVoiding(false);
-    setVoidingTx(null);
+    setIsConfirmingVoid(true);
+    try {
+      await voidOrReverseTransactionAction(voidingTx.id, voidReason.trim());
+      setIsVoiding(false);
+      setVoidingTx(null);
+    } finally {
+      setIsConfirmingVoid(false);
+    }
   };
 
   const handleReview = async (txId: string) => {
@@ -402,13 +420,7 @@ export function FinanceClient({
         title="Record Income / Member Dues"
         description="Generates an official verifiable receipt number automatically."
       >
-        <form
-          action={async (formData) => {
-            await incomeAction(formData);
-            setIsIncomeOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={incomeAction} className="space-y-4">
           {incomeState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {incomeState.error}
@@ -517,7 +529,7 @@ export function FinanceClient({
             <Button type="button" variant="secondary" onClick={() => setIsIncomeOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Issue Receipt & Save</Button>
+            <SubmitButton loadingText="Issuing Receipt & Saving...">Issue Receipt & Save</SubmitButton>
           </div>
         </form>
       </Modal>
@@ -529,13 +541,7 @@ export function FinanceClient({
         title="Record Expense Disbursement"
         description="Records an expenditure out of choir funds."
       >
-        <form
-          action={async (formData) => {
-            await expenseAction(formData);
-            setIsExpenseOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={expenseAction} className="space-y-4">
           {expenseState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {expenseState.error}
@@ -619,7 +625,7 @@ export function FinanceClient({
             <Button type="button" variant="secondary" onClick={() => setIsExpenseOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Record Disbursement</Button>
+            <SubmitButton loadingText="Recording Disbursement...">Record Disbursement</SubmitButton>
           </div>
         </form>
       </Modal>
@@ -663,6 +669,8 @@ export function FinanceClient({
               <Button
                 variant="danger"
                 onClick={handleConfirmVoid}
+                isLoading={isConfirmingVoid}
+                loadingText="Voiding Transaction..."
                 disabled={!voidReason.trim() || voidReason.trim().length < 5}
               >
                 Confirm Void & Log Audit

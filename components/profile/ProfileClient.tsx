@@ -6,7 +6,7 @@ import { User } from '@/lib/types';
 import { updateProfileAction, changePasswordAction } from '@/lib/actions/auth';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { User as UserIcon, Lock, CheckCircle2, Shield } from 'lucide-react';
 
@@ -112,7 +112,9 @@ export function ProfileClient({ user }: ProfileClientProps) {
             />
 
             <div className="pt-2 flex justify-end">
-              <Button type="submit">Update Contact Details</Button>
+              <SubmitButton loadingText="Updating Contact Details...">
+                Update Contact Details
+              </SubmitButton>
             </div>
           </form>
         </Card>
@@ -159,9 +161,9 @@ export function ProfileClient({ user }: ProfileClientProps) {
             />
 
             <div className="pt-2 flex justify-end">
-              <Button type="submit" variant="secondary">
+              <SubmitButton variant="secondary" loadingText="Updating Password...">
                 Change Password
-              </Button>
+              </SubmitButton>
             </div>
           </form>
         </Card>

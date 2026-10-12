@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { submitRsvpAction } from '@/lib/actions/events';
 import { Modal } from '@/components/ui/Modal';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { RsvpStatus } from '@/lib/types';
 import { Check, X, HelpCircle } from 'lucide-react';
 
@@ -28,13 +28,11 @@ export function RsvpButton({
   const [reason, setReason] = useState(currentReason || '');
   const [state, formAction] = useFormState(submitRsvpAction, null);
 
-  const handleSubmit = async (formData: FormData) => {
-    formData.append('eventId', eventId);
-    formData.append('status', selectedStatus);
-    formData.append('apologyReason', reason);
-    formAction(formData);
-    setIsOpen(false);
-  };
+  useEffect(() => {
+    if (state?.success) {
+      setIsOpen(false);
+    }
+  }, [state]);
 
   return (
     <>
@@ -52,7 +50,9 @@ export function RsvpButton({
         title={`RSVP: ${eventTitle}`}
         description="Let the choir director and section leaders know if you will be present."
       >
-        <form action={handleSubmit} className="space-y-5">
+        <form action={formAction} className="space-y-5">
+          <input type="hidden" name="eventId" value={eventId} />
+          <input type="hidden" name="status" value={selectedStatus} />
           {state?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {state.error}
@@ -133,7 +133,7 @@ export function RsvpButton({
             >
               Cancel
             </Button>
-            <Button type="submit">Confirm RSVP</Button>
+            <SubmitButton loadingText="Recording RSVP...">Confirm RSVP</SubmitButton>
           </div>
         </form>
       </Modal>

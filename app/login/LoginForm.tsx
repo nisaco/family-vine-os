@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useFormState } from 'react-dom';
+import { useFormState, useFormStatus } from 'react-dom';
 import { signInAction } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -66,9 +66,7 @@ export function LoginForm() {
               placeholder="••••••••••••"
             />
 
-            <Button type="submit" className="w-full py-2.5 text-sm font-semibold">
-              Sign In to Portal
-            </Button>
+            <LoginSubmitButton />
           </form>
 
           <div className="mt-4 text-center text-sm">
@@ -222,5 +220,20 @@ export function LoginForm() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoginSubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      isLoading={pending}
+      disabled={pending}
+      className="w-full py-2.5 text-sm font-semibold shadow-xs hover:shadow-sm transition-all"
+    >
+      {pending ? 'Verifying Credentials...' : 'Sign In to Portal'}
+    </Button>
   );
 }

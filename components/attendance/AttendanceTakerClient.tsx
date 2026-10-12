@@ -49,6 +49,7 @@ export function AttendanceTakerClient({
   const [correctionStatus, setCorrectionStatus] = useState<AttendanceStatus>('PRESENT');
   const [correctionReason, setCorrectionReason] = useState('');
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [isSavingCorrection, setIsSavingCorrection] = useState(false);
 
   const currentRecords = recordsByEvent[selectedEventId] || [];
   const recordsMap = new Map<string, AttendanceRecord>();
@@ -91,13 +92,18 @@ export function AttendanceTakerClient({
 
   const handleSaveCorrection = async () => {
     if (!correctingRecord || !correctionReason.trim()) return;
-    await correctAttendanceAction(
-      correctingRecord.id,
-      correctionStatus,
-      correctionReason.trim()
-    );
-    setIsCorrecting(false);
-    setCorrectingRecord(null);
+    setIsSavingCorrection(true);
+    try {
+      await correctAttendanceAction(
+        correctingRecord.id,
+        correctionStatus,
+        correctionReason.trim()
+      );
+      setIsCorrecting(false);
+      setCorrectingRecord(null);
+    } finally {
+      setIsSavingCorrection(false);
+    }
   };
 
   // Stats for the current event
@@ -369,7 +375,12 @@ export function AttendanceTakerClient({
               <Button variant="secondary" onClick={() => setIsCorrecting(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveCorrection} disabled={!correctionReason.trim()}>
+              <Button
+                onClick={handleSaveCorrection}
+                isLoading={isSavingCorrection}
+                loadingText="Saving Correction..."
+                disabled={!correctionReason.trim()}
+              >
                 Save Correction & Audit
               </Button>
             </div>

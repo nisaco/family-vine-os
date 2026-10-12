@@ -156,7 +156,19 @@ npm run seed
 > - Soprano Member: `akua.serwaa@familyvinechoir.org`
 > - Musician Member: `yaw.bio@familyvinechoir.org`
 
-### 7. Running the Application
+### 7. Preparing for Production (Stripping Demo Data)
+When church executives approve the deployment for official ministry operations, all demonstration and testing records can be cleanly and permanently purged:
+```bash
+npm run db:wipe
+```
+*Note: This command requires `MONGODB_URI` and interactively prompts for confirmation (`WIPE DEMO DATA`) to prevent accidental execution. You can also pass `--force` in non-interactive environments.*
+
+Once the database is clean, the application automatically welcomes leadership to the pristine web onboarding wizard at `/setup`, or an administrator can be provisioned via CLI:
+```bash
+npm run init-admin
+```
+
+### 8. Running the Application
 ```bash
 npm run dev
 ```

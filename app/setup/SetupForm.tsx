@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useFormState } from 'react-dom';
+import { useFormState, useFormStatus } from 'react-dom';
 import { setupFirstAdminAction } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -56,11 +56,24 @@ export function SetupForm() {
       />
 
       <div className="pt-2">
-        <Button type="submit" className="w-full py-2.5 text-sm font-semibold">
-          Initialize Administrator Account
-        </Button>
+        <SetupSubmitButton />
       </div>
     </form>
+  );
+}
+
+function SetupSubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      isLoading={pending}
+      disabled={pending}
+      className="w-full py-2.5 text-sm font-semibold shadow-xs hover:shadow-sm transition-all"
+    >
+      {pending ? 'Initializing Administrator Account...' : 'Initialize Administrator Account'}
+    </Button>
   );
 }
 

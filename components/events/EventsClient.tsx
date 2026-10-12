@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { ChoirEvent, EventRsvp, UserRole, EventType } from '@/lib/types';
 import { createEventAction, cancelEventAction } from '@/lib/actions/events';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { RsvpButton } from './RsvpButton';
@@ -45,6 +45,12 @@ export function EventsClient({
   const [selectedEventRoster, setSelectedEventRoster] = useState<string | null>(null);
 
   const [createState, createAction] = useFormState(createEventAction, null);
+
+  useEffect(() => {
+    if (createState?.success) {
+      setIsCreateOpen(false);
+    }
+  }, [createState]);
 
   const canManageEvents =
     currentUserRole === 'ADMIN' ||
@@ -340,13 +346,7 @@ export function EventsClient({
         title="Schedule Choir Event"
         description="Add a rehearsal, Sunday service ministration, or choir meeting."
       >
-        <form
-          action={async (formData) => {
-            await createAction(formData);
-            setIsCreateOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={createAction} className="space-y-4">
           {createState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {createState.error}
@@ -459,7 +459,7 @@ export function EventsClient({
             <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Publish Event</Button>
+            <SubmitButton loadingText="Publishing Event...">Publish Event</SubmitButton>
           </div>
         </form>
       </Modal>

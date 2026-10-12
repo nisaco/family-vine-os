@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormState } from 'react-dom';
 import { Song, SongResource, UserRole, Voicing, SongCategory, ResourceType } from '@/lib/types';
 import { createSongAction, addSongResourceAction } from '@/lib/actions/songs';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import {
@@ -35,6 +35,18 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
 
   const [songState, songAction] = useFormState(createSongAction, null);
   const [resourceState, resourceAction] = useFormState(addSongResourceAction, null);
+
+  useEffect(() => {
+    if (songState?.success) {
+      setIsNewSongOpen(false);
+    }
+  }, [songState]);
+
+  useEffect(() => {
+    if (resourceState?.success) {
+      setSelectedSongForResource(null);
+    }
+  }, [resourceState]);
 
   const canManageSongs =
     currentUserRole === 'ADMIN' ||
@@ -257,13 +269,7 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
         title="Add Choral Work to Library"
         description="Catalog a new musical score, anthem, or liturgical hymn."
       >
-        <form
-          action={async (formData) => {
-            await songAction(formData);
-            setIsNewSongOpen(false);
-          }}
-          className="space-y-4"
-        >
+        <form action={songAction} className="space-y-4">
           {songState?.error && (
             <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {songState.error}
@@ -335,7 +341,7 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
             <Button type="button" variant="secondary" onClick={() => setIsNewSongOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add to Repertoire</Button>
+            <SubmitButton loadingText="Adding to Repertoire...">Add to Repertoire</SubmitButton>
           </div>
         </form>
       </Modal>
@@ -348,14 +354,8 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
           title={`Attach Resource: ${selectedSongForResource.title}`}
           description="Provide a link to verified sheet music PDFs, section practice audio, or video recordings."
         >
-          <form
-            action={async (formData) => {
-              formData.append('songId', selectedSongForResource.id);
-              await resourceAction(formData);
-              setSelectedSongForResource(null);
-            }}
-            className="space-y-4"
-          >
+          <form action={resourceAction} className="space-y-4">
+            <input type="hidden" name="songId" value={selectedSongForResource.id} />
             {resourceState?.error && (
               <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
                 {resourceState.error}
@@ -421,7 +421,7 @@ export function SongsClient({ songs, currentUserRole }: SongsClientProps) {
               <Button type="button" variant="secondary" onClick={() => setSelectedSongForResource(null)}>
                 Cancel
               </Button>
-              <Button type="submit">Attach Resource</Button>
+              <SubmitButton loadingText="Attaching Resource...">Attach Resource</SubmitButton>
             </div>
           </form>
         </Modal>
