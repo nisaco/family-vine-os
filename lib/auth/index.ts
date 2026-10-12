@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
-import { getDb } from '@/lib/db';
+import { countDocuments, deleteDocuments, findOne, insertDocument } from '@/lib/db';
 import type { User, SafeUser, UserRole, Session } from '@/lib/types';
 
 export const SESSION_COOKIE_NAME = 'family_vine_session';
@@ -15,52 +15,45 @@ export async function verifyPassword(plainText: string, hash: string): Promise<b
   return bcrypt.compare(plainText, hash);
 }
 
-export function isFirstAdminNeeded(customDb?: ReturnType<typeof getDb>): boolean {
-  const db = customDb || getDb();
-  const row = db.prepare('SELECT count(*) as count FROM users').get() as { count: number };
-  return row.count === 0;
+export async function isFirstAdminNeeded(): Promise<boolean> {
+  return (await countDocuments('users')) === 0;
 }
 
-export function createSession(userId: string, customDb?: ReturnType<typeof getDb>): { session: Session; token: string } {
-  const db = customDb || getDb();
+export async function createSession(userId: string): Promise<{ session: Session; token: string }> {
   const id = `sess_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const token = crypto.randomBytes(32).toString('hex');
   const now = new Date();
   const expires = new Date(now.getTime() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
-  db.prepare(`
-    INSERT INTO sessions (id, user_id, token, expires_at, created_at)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, userId, token, expires.toISOString(), now.toISOString());
+  const session = {
+    id,
+    user_id: userId,
+    token,
+    expires_at: expires.toISOString(),
+    created_at: now.toISOString(),
+  };
+  await insertDocument('sessions', session);
 
   return {
-    session: {
-      id,
-      user_id: userId,
-      token,
-      expires_at: expires.toISOString(),
-      created_at: now.toISOString(),
-    },
+    session,
     token,
   };
 }
 
-export function deleteSession(token: string, customDb?: ReturnType<typeof getDb>): void {
-  const db = customDb || getDb();
-  db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+export async function deleteSession(token: string): Promise<void> {
+  await deleteDocuments('sessions', { token });
 }
 
-export function getUserByToken(token: string, customDb?: ReturnType<typeof getDb>): User | null {
+export async function getUserByToken(token: string): Promise<User | null> {
   if (!token) return null;
-  const db = customDb || getDb();
   const now = new Date().toISOString();
 
-  const user = db.prepare(`
-    SELECT u.*
-    FROM users u
-    JOIN sessions s ON u.id = s.user_id
-    WHERE s.token = ? AND s.expires_at > ?
-  `).get(token, now) as User | undefined;
+  const session = await findOne<Session>('sessions', {
+    token,
+    expires_at: { $gt: now },
+  });
+  if (!session) return null;
+  const user = await findOne<User>('users', { id: session.user_id });
 
   if (!user) return null;
   if (user.status !== 'ACTIVE') return null; // Deactivated accounts cannot use active sessions
@@ -69,14 +62,10 @@ export function getUserByToken(token: string, customDb?: ReturnType<typeof getDb
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-    if (!token) return null;
-    return getUserByToken(token);
-  } catch {
-    return null;
-  }
+  const cookieStore = cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (!token) return null;
+  return getUserByToken(token);
 }
 
 export function sanitizeUser(user: User, requesterRole?: UserRole, isSelf = false): SafeUser {
@@ -231,4 +220,3 @@ export function hasPermission(
       return false;
   }
 }
-

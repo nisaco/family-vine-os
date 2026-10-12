@@ -51,21 +51,25 @@ export default async function DashboardPage() {
   if (!user) {
     redirect('/login');
   }
-  const settings = getChoirSettings();
-  const allEvents = getEvents();
+  const [settings, allEvents, announcements, myAttendance, myFinances, todayBirthdays, upcomingBirthdays] =
+    await Promise.all([
+      getChoirSettings(),
+      getEvents(),
+      getAnnouncements(user.role, user.voice_part, user.wing),
+      getUserAttendanceStats(user.id),
+      getUserPaymentSummary(user.id),
+      getTodayBirthdays(),
+      getUpcomingBirthdays(14),
+    ]);
   const upcomingEvents = allEvents.filter(
     (e) => e.status !== 'CANCELLED' && new Date(e.start_time) >= new Date(Date.now() - 3600000 * 2)
   );
   const nextEvent = upcomingEvents[0] || null;
-  const nextEventUserRsvp = nextEvent ? getUserRsvpForEvent(nextEvent.id, user.id) : null;
+  const nextEventUserRsvp = nextEvent ? await getUserRsvpForEvent(nextEvent.id, user.id) : null;
 
-  const announcements = getAnnouncements(user.role, user.voice_part, user.wing).slice(0, 4);
-  const myAttendance = getUserAttendanceStats(user.id);
-  const myFinances = getUserPaymentSummary(user.id);
+  const recentAnnouncements = announcements.slice(0, 4);
 
   // Birthday & Welfare data
-  const todayBirthdays = getTodayBirthdays();
-  const upcomingBirthdays = getUpcomingBirthdays(14);
   const isMyBirthday = (() => {
     if (!user.birth_date) return false;
     const now = new Date();
@@ -98,14 +102,16 @@ export default async function DashboardPage() {
     user.role === 'FINANCIAL_SECRETARY' ||
     user.role === 'TREASURER';
 
-  const members = isOfficerOrAdmin ? getAllMembers(user.role, user.id) : [];
+  const [members, choirAttendance, financialSummary, myActionItems] = await Promise.all([
+    isOfficerOrAdmin ? getAllMembers(user.role, user.id) : Promise.resolve([]),
+    isOfficerOrAdmin ? getChoirAttendanceOverview() : Promise.resolve(null),
+    canViewFinances ? getFinancialSummary() : Promise.resolve(null),
+    isOfficerOrAdmin ? getActionItems({ assignedTo: user.id, status: 'PENDING' }) : Promise.resolve([]),
+  ]);
   const activeMembersCount = members.filter((m) => m.status === 'ACTIVE').length;
   const praiseCount = members.filter((m) => m.wing === 'Family of Praise' && m.status === 'ACTIVE').length;
   const asaphitesCount = members.filter((m) => m.wing === 'Asaphites' && m.status === 'ACTIVE').length;
   const vimmiesCount = members.filter((m) => m.wing === 'Vimmies' && m.status === 'ACTIVE').length;
-  const choirAttendance = isOfficerOrAdmin ? getChoirAttendanceOverview() : null;
-  const financialSummary = canViewFinances ? getFinancialSummary() : null;
-  const myActionItems = isOfficerOrAdmin ? getActionItems({ assignedTo: user.id, status: 'PENDING' }) : [];
 
   return (
     <div className="space-y-6">
@@ -612,9 +618,9 @@ export default async function DashboardPage() {
             </Link>
           }
         >
-          {announcements.length > 0 ? (
+          {recentAnnouncements.length > 0 ? (
             <div className="divide-y divide-stone-100">
-              {announcements.map((ann) => (
+              {recentAnnouncements.map((ann) => (
                 <div key={ann.id} className="py-3.5 first:pt-0 last:pb-0 space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="text-sm font-semibold text-stone-900">

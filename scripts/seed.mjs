@@ -10,8 +10,13 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import { spawnSync } from 'node:child_process';
 
-const dbPath = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'data', 'family_vine.db');
+const dbPath = process.env.SQLITE_PATH || path.resolve(process.cwd(), 'data', 'family_vine.db');
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI is required. Set it in your shell or environment; do not put it in source code.');
+  process.exit(1);
+}
 
 if (dbPath !== ':memory:') {
   const dir = path.dirname(dbPath);
@@ -1059,8 +1064,16 @@ async function seed() {
   console.log('--------------------------------------------------------------------------------------');
 }
 
-seed().catch((err) => {
+seed().then(() => {
+  db.close();
+  const migration = spawnSync(
+    process.execPath,
+    [path.resolve(process.cwd(), 'scripts', 'migrate-sqlite-to-mongodb.mjs')],
+    { stdio: 'inherit', env: { ...process.env, SQLITE_PATH: dbPath } }
+  );
+  if (migration.error) throw migration.error;
+  if (migration.status !== 0) throw new Error('Demo data could not be migrated into MongoDB.');
+}).catch((err) => {
   console.error('Seed script failed:', err);
-  process.exit(1);
+  process.exitCode = 1;
 });
-

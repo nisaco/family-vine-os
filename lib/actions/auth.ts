@@ -3,9 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import { getDb } from '@/lib/db';
+import { deleteDocuments, findOne, insertDocument, updateDocument } from '@/lib/db';
 import {
   SESSION_COOKIE_NAME,
   createSession,
@@ -25,8 +23,11 @@ export async function signInAction(prevState: unknown, formData: FormData) {
     return { error: 'Please enter both your email address and password.' };
   }
 
-  const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
+  const user = await findOne<User>(
+    'users',
+    { email },
+    { collation: { locale: 'en', strength: 2 } }
+  );
 
   if (!user) {
     return { error: 'Invalid email or password.' };
@@ -42,7 +43,7 @@ export async function signInAction(prevState: unknown, formData: FormData) {
   }
 
   // Create session
-  const { token, session } = createSession(user.id, db);
+  const { token, session } = await createSession(user.id);
   const cookieStore = cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -52,7 +53,7 @@ export async function signInAction(prevState: unknown, formData: FormData) {
     expires: new Date(session.expires_at),
   });
 
-  logAudit({
+  await logAudit({
     actorId: user.id,
     actorName: user.full_name,
     action: 'USER_SIGN_IN',
@@ -68,12 +69,11 @@ export async function signOutAction() {
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (token) {
     const user = await getCurrentUser();
-    const db = getDb();
-    db.prepare('DELETE FROM sessions WHERE token = ?').run(token);
+    await deleteDocuments('sessions', { token });
     cookieStore.delete(SESSION_COOKIE_NAME);
 
     if (user) {
-      logAudit({
+      await logAudit({
         actorId: user.id,
         actorName: user.full_name,
         action: 'USER_SIGN_OUT',
@@ -86,8 +86,7 @@ export async function signOutAction() {
 }
 
 export async function setupFirstAdminAction(prevState: unknown, formData: FormData) {
-  const db = getDb();
-  if (!isFirstAdminNeeded(db)) {
+  if (!(await isFirstAdminNeeded())) {
     return { error: 'Administrator already exists. Initial setup is locked.' };
   }
 
@@ -116,27 +115,30 @@ export async function setupFirstAdminAction(prevState: unknown, formData: FormDa
   const now = new Date().toISOString();
   const passwordHash = await hashPassword(password);
 
-  db.prepare(`
-    INSERT INTO users (
-      id, email, password_hash, full_name, preferred_name, phone, voice_part,
-      role, status, join_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    email,
-    passwordHash,
-    fullName,
-    fullName.split(' ')[0],
-    null,
-    'Director',
-    'ADMIN',
-    'ACTIVE',
-    now.slice(0, 10),
-    now,
-    now
-  );
+  try {
+    await insertDocument('users', {
+      id,
+      email,
+      password_hash: passwordHash,
+      full_name: fullName,
+      preferred_name: fullName.split(' ')[0],
+      phone: null,
+      voice_part: 'Director',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      join_date: now.slice(0, 10),
+      created_at: now,
+      updated_at: now,
+      is_initial_admin: true,
+    });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      return { error: 'Administrator already exists. Initial setup is locked.' };
+    }
+    throw error;
+  }
 
-  logAudit({
+  await logAudit({
     actorId: id,
     actorName: fullName,
     action: 'INITIALIZE_FIRST_ADMIN',
@@ -145,7 +147,7 @@ export async function setupFirstAdminAction(prevState: unknown, formData: FormDa
     details: { email, role: 'ADMIN' },
   });
 
-  const { token, session } = createSession(id, db);
+  const { token, session } = await createSession(id);
   const cookieStore = cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
@@ -171,22 +173,20 @@ export async function updateProfileAction(prevState: unknown, formData: FormData
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
   const birthDate = (formData.get('birthDate') as string)?.trim() || null;
 
-  const db = getDb();
   const now = new Date().toISOString();
+  await updateDocument('users', { id: user.id }, {
+    $set: {
+      preferred_name: preferredName,
+      phone,
+      address,
+      emergency_contact_name: emergencyName,
+      emergency_contact_phone: emergencyPhone,
+      birth_date: birthDate,
+      updated_at: now,
+    },
+  });
 
-  db.prepare(`
-    UPDATE users SET
-      preferred_name = ?,
-      phone = ?,
-      address = ?,
-      emergency_contact_name = ?,
-      emergency_contact_phone = ?,
-      birth_date = ?,
-      updated_at = ?
-    WHERE id = ?
-  `).run(preferredName, phone, address, emergencyName, emergencyPhone, birthDate, now, user.id);
-
-  logAudit({
+  await logAudit({
     actorId: user.id,
     actorName: user.full_name,
     action: 'UPDATE_OWN_PROFILE',
@@ -225,15 +225,13 @@ export async function changePasswordAction(prevState: unknown, formData: FormDat
     return { error: 'Current password is incorrect.' };
   }
 
-  const db = getDb();
   const passwordHash = await hashPassword(newPassword);
   const now = new Date().toISOString();
+  await updateDocument('users', { id: user.id }, {
+    $set: { password_hash: passwordHash, updated_at: now },
+  });
 
-  db.prepare(`
-    UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?
-  `).run(passwordHash, now, user.id);
-
-  logAudit({
+  await logAudit({
     actorId: user.id,
     actorName: user.full_name,
     action: 'CHANGE_PASSWORD',
@@ -244,4 +242,3 @@ export async function changePasswordAction(prevState: unknown, formData: FormDat
   revalidatePath('/profile');
   return { success: 'Password changed successfully.' };
 }
-

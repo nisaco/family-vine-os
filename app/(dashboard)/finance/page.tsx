@@ -23,11 +23,13 @@ export default async function FinancePage() {
     redirect('/my-finances');
   }
 
-  const settings = getChoirSettings();
-  const transactions = getFinancialTransactions();
-  const categories = getFinancialCategories();
-  const summary = getFinancialSummary();
-  const members = getAllMembers(user.role, user.id);
+  const [settings, transactions, categories, summary, members] = await Promise.all([
+    getChoirSettings(),
+    getFinancialTransactions(),
+    getFinancialCategories(),
+    getFinancialSummary(),
+    getAllMembers(user.role, user.id),
+  ]);
 
   return (
     <FinanceClient
@@ -43,4 +45,3 @@ export default async function FinancePage() {
     />
   );
 }
-

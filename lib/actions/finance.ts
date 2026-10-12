@@ -1,32 +1,44 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { findMany, findOne, getCollection, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import { parseCurrencyToCents, validatePositiveCents } from '@/lib/utils/currency';
 import type { PaymentMethod } from '@/lib/types';
 
-function generateReceiptNumber(db: ReturnType<typeof getDb>): string {
+async function generateReceiptNumber(): Promise<string> {
   const currentYear = new Date().getFullYear();
   const prefix = `REC-${currentYear}-`;
-  const latest = db.prepare(`
-    SELECT receipt_number FROM financial_transactions
-    WHERE receipt_number LIKE ?
-    ORDER BY receipt_number DESC
-    LIMIT 1
-  `).get(`${prefix}%`) as { receipt_number: string } | undefined;
+  const counterId = `receipt-${currentYear}`;
+  const counters = await getCollection('counters');
+  const counter = await counters.findOne<{ value: number }>({ id: counterId });
 
-  let nextSequence = 1;
-  if (latest?.receipt_number) {
-    const parts = latest.receipt_number.split('-');
-    const seq = parseInt(parts[2], 10);
-    if (!isNaN(seq)) {
-      nextSequence = seq + 1;
+  if (!counter) {
+    const existingReceipts = await findMany<{ receipt_number: string }>(
+      'financial_transactions',
+      { receipt_number: { $regex: `^${prefix}` } },
+      { receipt_number: -1 },
+      1
+    );
+    const latestSequence = existingReceipts[0]?.receipt_number.split('-')[2];
+    const initialValue = latestSequence ? parseInt(latestSequence, 10) || 0 : 0;
+    try {
+      await counters.insertOne({ id: counterId, value: initialValue });
+    } catch (error) {
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 11000)) throw error;
     }
   }
 
-  return `${prefix}${nextSequence.toString().padStart(4, '0')}`;
+  const updatedCounter = await counters.findOneAndUpdate(
+    { id: counterId },
+    { $inc: { value: 1 } },
+    { returnDocument: 'after' }
+  );
+  if (!updatedCounter || typeof updatedCounter.value !== 'number') {
+    throw new Error('Unable to allocate a unique financial receipt number.');
+  }
+  return `${prefix}${updatedCounter.value.toString().padStart(4, '0')}`;
 }
 
 export async function createIncomeTransactionAction(prevState: unknown, formData: FormData) {
@@ -61,35 +73,20 @@ export async function createIncomeTransactionAction(prevState: unknown, formData
     return { error: check.error };
   }
 
-  const db = getDb();
-  const receiptNumber = generateReceiptNumber(db);
+  const receiptNumber = await generateReceiptNumber();
   const id = `tx_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO financial_transactions (
-      id, transaction_type, receipt_number, category_id, amount_cents, date,
-      member_id, dues_period, payee_or_source, description, payment_method,
-      status, reference_note, created_by, created_at, updated_at
-    ) VALUES (?, 'INCOME', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'POSTED', ?, ?, ?, ?)
-  `).run(
-    id,
-    receiptNumber,
-    categoryId,
-    amountCents,
-    date,
-    memberId,
-    duesPeriod,
-    payeeOrSource,
-    description,
-    paymentMethod,
-    referenceNote,
-    actor.id,
-    now,
-    now
-  );
+  await insertDocument('financial_transactions', {
+    id, transaction_type: 'INCOME', receipt_number: receiptNumber, category_id: categoryId,
+    amount_cents: amountCents, date, member_id: memberId, dues_period: duesPeriod,
+    payee_or_source: payeeOrSource, description, payment_method: paymentMethod,
+    status: 'POSTED', reference_note: referenceNote, created_by: actor.id,
+    reviewed_by: null, reviewed_at: null, reversal_of_id: null, reversal_reason: null,
+    created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'RECORD_FINANCIAL_INCOME',
@@ -134,31 +131,19 @@ export async function createExpenseTransactionAction(prevState: unknown, formDat
     return { error: check.error };
   }
 
-  const db = getDb();
   const id = `tx_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO financial_transactions (
-      id, transaction_type, receipt_number, category_id, amount_cents, date,
-      member_id, dues_period, payee_or_source, description, payment_method,
-      status, reference_note, created_by, created_at, updated_at
-    ) VALUES (?, 'EXPENSE', NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, 'POSTED', ?, ?, ?, ?)
-  `).run(
-    id,
-    categoryId,
-    amountCents,
-    date,
-    payeeOrSource,
-    description,
-    paymentMethod,
-    referenceNote,
-    actor.id,
-    now,
-    now
-  );
+  await insertDocument('financial_transactions', {
+    id, transaction_type: 'EXPENSE', receipt_number: null, category_id: categoryId,
+    amount_cents: amountCents, date, member_id: null, dues_period: null,
+    payee_or_source: payeeOrSource, description, payment_method: paymentMethod,
+    status: 'POSTED', reference_note: referenceNote, created_by: actor.id,
+    reviewed_by: null, reviewed_at: null, reversal_of_id: null, reversal_reason: null,
+    created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'RECORD_FINANCIAL_EXPENSE',
@@ -185,13 +170,12 @@ export async function voidOrReverseTransactionAction(
     return { error: 'A detailed reversal reason is mandatory for financial integrity and auditing.' };
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT * FROM financial_transactions WHERE id = ?').get(transactionId) as {
+  const existing = await findOne<{
     status: string;
     receipt_number: string;
     amount_cents: number;
     description: string;
-  } | undefined;
+  }>('financial_transactions', { id: transactionId });
 
   if (!existing) {
     return { error: 'Transaction not found.' };
@@ -202,15 +186,11 @@ export async function voidOrReverseTransactionAction(
   }
 
   const now = new Date().toISOString();
-  db.prepare(`
-    UPDATE financial_transactions SET
-      status = 'VOIDED',
-      reversal_reason = ?,
-      updated_at = ?
-    WHERE id = ?
-  `).run(reason, now, transactionId);
+  await updateDocument('financial_transactions', { id: transactionId }, {
+    $set: { status: 'VOIDED', reversal_reason: reason, updated_at: now },
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'VOID_FINANCIAL_TRANSACTION',
@@ -235,11 +215,10 @@ export async function reviewTransactionAction(transactionId: string) {
     return { error: 'Unauthorized: Only financial officers can review ledger entries.' };
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT * FROM financial_transactions WHERE id = ?').get(transactionId) as {
+  const existing = await findOne<{
     created_by: string;
     reviewed_by: string;
-  } | undefined;
+  }>('financial_transactions', { id: transactionId });
 
   if (!existing) {
     return { error: 'Transaction not found.' };
@@ -251,15 +230,11 @@ export async function reviewTransactionAction(transactionId: string) {
   }
 
   const now = new Date().toISOString();
-  db.prepare(`
-    UPDATE financial_transactions SET
-      reviewed_by = ?,
-      reviewed_at = ?,
-      updated_at = ?
-    WHERE id = ?
-  `).run(actor.id, now, now, transactionId);
+  await updateDocument('financial_transactions', { id: transactionId }, {
+    $set: { reviewed_by: actor.id, reviewed_at: now, updated_at: now },
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'REVIEW_FINANCIAL_TRANSACTION',
@@ -270,4 +245,3 @@ export async function reviewTransactionAction(transactionId: string) {
   revalidatePath('/finance');
   return { success: 'Entry reviewed and marked as verified.' };
 }
-

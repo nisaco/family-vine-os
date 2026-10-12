@@ -12,8 +12,10 @@ export default async function AnnouncementsPage() {
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
-  const announcements = getAnnouncements(user.role, user.voice_part, user.wing);
+  const [settings, announcements] = await Promise.all([
+    getChoirSettings(),
+    getAnnouncements(user.role, user.voice_part, user.wing),
+  ]);
 
   return (
     <AnnouncementsClient
@@ -23,4 +25,3 @@ export default async function AnnouncementsPage() {
     />
   );
 }
-

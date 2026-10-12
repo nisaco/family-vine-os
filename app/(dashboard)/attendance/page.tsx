@@ -18,14 +18,14 @@ export default async function AttendancePage() {
     redirect('/my-attendance');
   }
 
-  const settings = getChoirSettings();
-  const events = getEvents(true);
-  const members = getAllMembers(user.role, user.id);
+  const [settings, events, members] = await Promise.all([
+    getChoirSettings(),
+    getEvents(true),
+    getAllMembers(user.role, user.id),
+  ]);
 
-  const recordsByEvent: Record<string, AttendanceRecord[]> = {};
-  for (const event of events) {
-    recordsByEvent[event.id] = getEventAttendance(event.id);
-  }
+  const eventRecords = await Promise.all(events.map(async (event) => [event.id, await getEventAttendance(event.id)] as const));
+  const recordsByEvent = Object.fromEntries(eventRecords) as Record<string, AttendanceRecord[]>;
 
   const initialEventId = events[0]?.id || '';
 
@@ -40,4 +40,3 @@ export default async function AttendancePage() {
     />
   );
 }
-

@@ -16,13 +16,10 @@ export async function GET(request: Request) {
   const startDate = searchParams.get('startDate') || undefined;
   const endDate = searchParams.get('endDate') || undefined;
 
-  const settings = getChoirSettings();
-  const transactions = getFinancialTransactions({
-    type,
-    status,
-    startDate,
-    endDate,
-  });
+  const [settings, transactions] = await Promise.all([
+    getChoirSettings(),
+    getFinancialTransactions({ type, status, startDate, endDate }),
+  ]);
 
   const headers = [
     'Date',
@@ -68,4 +65,3 @@ export async function GET(request: Request) {
     },
   });
 }
-

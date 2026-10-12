@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { deleteDocuments, findOne, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
@@ -35,8 +35,11 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
     return { error: 'Only administrators can assign leadership roles.' };
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  const existing = await findOne<{ id: string }>(
+    'users',
+    { email },
+    { collation: { locale: 'en', strength: 2 } }
+  );
   if (existing) {
     return { error: 'A member with this email address already exists.' };
   }
@@ -45,35 +48,23 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
   const now = new Date().toISOString();
   const passwordHash = await hashPassword(temporaryPassword);
 
-  db.prepare(`
-    INSERT INTO users (
-      id, email, password_hash, full_name, preferred_name, phone, wing, wing_role, voice_part,
-      role, status, address, emergency_contact_name, emergency_contact_phone,
-      officer_notes, birth_date, join_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    email,
-    passwordHash,
-    fullName,
-    fullName.split(' ')[0],
-    phone,
-    wing,
-    wingRole,
-    voicePart,
-    role,
-    'ACTIVE',
-    address,
-    emergencyName,
-    emergencyPhone,
-    officerNotes,
-    birthDate,
-    now.slice(0, 10),
-    now,
-    now
-  );
+  try {
+    await insertDocument('users', {
+      id, email, password_hash: passwordHash, full_name: fullName,
+      preferred_name: fullName.split(' ')[0], phone, wing, wing_role: wingRole,
+      voice_part: voicePart, role, status: 'ACTIVE', address,
+      emergency_contact_name: emergencyName, emergency_contact_phone: emergencyPhone,
+      officer_notes: officerNotes, birth_date: birthDate, join_date: now.slice(0, 10),
+      created_at: now, updated_at: now,
+    });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      return { error: 'A member with this email address already exists.' };
+    }
+    throw error;
+  }
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_MEMBER',
@@ -110,8 +101,7 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
     return { error: 'Member ID, name, and email are required.' };
   }
 
-  const db = getDb();
-  const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(memberId) as { role: UserRole } | undefined;
+  const targetUser = await findOne<{ role: UserRole }>('users', { id: memberId });
   if (!targetUser) {
     return { error: 'Member not found.' };
   }
@@ -126,25 +116,32 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   }
 
   const now = new Date().toISOString();
-  db.prepare(`
-    UPDATE users SET
-      full_name = ?,
-      email = ?,
-      phone = ?,
-      wing = ?,
-      wing_role = ?,
-      voice_part = ?,
-      role = ?,
-      officer_notes = ?,
-      birth_date = ?,
-      address = ?,
-      emergency_contact_name = ?,
-      emergency_contact_phone = ?,
-      updated_at = ?
-    WHERE id = ?
-  `).run(fullName, email, phone, wing, wingRole, voicePart, updatedRole, officerNotes, birthDate, address, emergencyName, emergencyPhone, now, memberId);
+  try {
+    await updateDocument('users', { id: memberId }, {
+      $set: {
+        full_name: fullName,
+        email,
+        phone,
+        wing,
+        wing_role: wingRole,
+        voice_part: voicePart,
+        role: updatedRole,
+        officer_notes: officerNotes,
+        birth_date: birthDate,
+        address,
+        emergency_contact_name: emergencyName,
+        emergency_contact_phone: emergencyPhone,
+        updated_at: now,
+      },
+    });
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+      return { error: 'A member with this email address already exists.' };
+    }
+    throw error;
+  }
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'UPDATE_MEMBER',
@@ -167,17 +164,16 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
     return { error: 'Cannot deactivate your own administrator account.' };
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
 
   // If deactivating, invalidate any active sessions
   if (newStatus !== 'ACTIVE') {
-    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(memberId);
+    await deleteDocuments('sessions', { user_id: memberId });
   }
 
-  db.prepare('UPDATE users SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, memberId);
+  await updateDocument('users', { id: memberId }, { $set: { status: newStatus, updated_at: now } });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: newStatus === 'ACTIVE' ? 'RESTORE_MEMBER' : 'DEACTIVATE_MEMBER',
@@ -189,4 +185,3 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
   revalidatePath('/directory');
   return { success: `Member account status changed to ${newStatus}.` };
 }
-

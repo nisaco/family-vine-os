@@ -4,7 +4,7 @@ import { getCurrentUser, isFirstAdminNeeded } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  if (isFirstAdminNeeded()) {
+  if (await isFirstAdminNeeded()) {
     redirect('/setup');
   }
 
@@ -15,4 +15,3 @@ export default async function HomePage() {
     redirect('/login');
   }
 }
-

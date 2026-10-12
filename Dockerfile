@@ -1,7 +1,7 @@
-FROM node:20-bookworm-slim
+FROM node:20.19-bookworm-slim
 WORKDIR /app
 
-# Install build dependencies for better-sqlite3 native compilation
+# Install build dependencies for the retained SQLite migration tooling
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 # Install npm dependencies
@@ -15,11 +15,9 @@ COPY . .
 ENV NODE_ENV=production
 RUN npm run build
 
-# Default persistent database location and port
+# Application port
 ENV PORT=3000
-ENV DATABASE_PATH=/var/data/family_vine.db
 
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]
-

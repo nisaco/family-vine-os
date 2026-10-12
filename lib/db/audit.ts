@@ -1,5 +1,5 @@
-import { getDb } from './index';
 import crypto from 'crypto';
+import { insertDocument } from './index';
 
 export interface AuditParams {
   actorId: string | null;
@@ -11,34 +11,23 @@ export interface AuditParams {
   ipAddress?: string | null;
 }
 
-export function logAudit(params: AuditParams, customDb?: ReturnType<typeof getDb>): void {
-  try {
-    const db = customDb || getDb();
-    const id = `aud_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    const now = new Date().toISOString();
-    const detailsStr = params.details
-      ? typeof params.details === 'string'
-        ? params.details
-        : JSON.stringify(params.details)
-      : null;
+export async function logAudit(params: AuditParams): Promise<void> {
+  const id = `aud_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const details = params.details
+    ? typeof params.details === 'string'
+      ? params.details
+      : JSON.stringify(params.details)
+    : null;
 
-    db.prepare(`
-      INSERT INTO audit_logs (id, actor_id, actor_name, action, entity_type, entity_id, details, ip_address, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      params.actorId || null,
-      params.actorName,
-      params.action,
-      params.entityType,
-      params.entityId || null,
-      detailsStr,
-      params.ipAddress || null,
-      now
-    );
-  } catch (error) {
-    // Avoid crashing primary flows if audit write fails, but log error
-    console.error('Failed to write audit log:', error);
-  }
+  await insertDocument('audit_logs', {
+    id,
+    actor_id: params.actorId || null,
+    actor_name: params.actorName,
+    action: params.action,
+    entity_type: params.entityType,
+    entity_id: params.entityId || null,
+    details,
+    ip_address: params.ipAddress || null,
+    created_at: new Date().toISOString(),
+  });
 }
-

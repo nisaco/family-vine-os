@@ -11,7 +11,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (isFirstAdminNeeded()) {
+  if (await isFirstAdminNeeded()) {
     redirect('/setup');
   }
 
@@ -20,7 +20,7 @@ export default async function DashboardLayout({
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
+  const settings = await getChoirSettings();
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] flex flex-col">
@@ -33,4 +33,3 @@ export default async function DashboardLayout({
     </div>
   );
 }
-

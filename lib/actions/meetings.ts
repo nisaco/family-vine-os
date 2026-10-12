@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { findOne, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { MeetingType, ActionItemStatus } from '@/lib/types';
@@ -23,17 +23,15 @@ export async function createMeetingAction(prevState: unknown, formData: FormData
     return { error: 'Meeting title, date, and minutes are required.' };
   }
 
-  const db = getDb();
   const id = `mtg_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO meetings (
-      id, title, meeting_type, date, location, minutes, is_confidential, created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, title, meetingType, date, location, minutes, isConfidential, actor.id, now, now);
+  await insertDocument('meetings', {
+    id, title, meeting_type: meetingType, date, location, minutes,
+    is_confidential: isConfidential, created_by: actor.id, created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_MEETING_MINUTES',
@@ -62,17 +60,15 @@ export async function createActionItemAction(prevState: unknown, formData: FormD
     return { error: 'Action item title and assignee are required.' };
   }
 
-  const db = getDb();
   const id = `act_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO action_items (
-      id, meeting_id, title, description, assigned_to, due_date, status, created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)
-  `).run(id, meetingId, title, description, assignedTo, dueDate, actor.id, now, now);
+  await insertDocument('action_items', {
+    id, meeting_id: meetingId, title, description, assigned_to: assignedTo, due_date: dueDate,
+    status: 'PENDING', created_by: actor.id, created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_ACTION_ITEM',
@@ -92,11 +88,10 @@ export async function updateActionItemStatusAction(id: string, newStatus: Action
     return { error: 'Authentication required.' };
   }
 
-  const db = getDb();
-  const existing = db.prepare('SELECT * FROM action_items WHERE id = ?').get(id) as {
+  const existing = await findOne<{
     assigned_to: string;
     created_by: string;
-  } | undefined;
+  }>('action_items', { id });
 
   if (!existing) {
     return { error: 'Action item not found.' };
@@ -113,10 +108,9 @@ export async function updateActionItemStatusAction(id: string, newStatus: Action
   }
 
   const now = new Date().toISOString();
-  db.prepare('UPDATE action_items SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, id);
+  await updateDocument('action_items', { id }, { $set: { status: newStatus, updated_at: now } });
 
   revalidatePath('/minutes');
   revalidatePath('/dashboard');
   return { success: 'Status updated.' };
 }
-

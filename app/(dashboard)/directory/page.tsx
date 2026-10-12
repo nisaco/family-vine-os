@@ -12,7 +12,7 @@ export default async function DirectoryPage() {
     redirect('/login');
   }
 
-  const members = getAllMembers(user.role, user.id);
+  const members = await getAllMembers(user.role, user.id);
 
   return (
     <DirectoryClient
@@ -22,4 +22,3 @@ export default async function DirectoryPage() {
     />
   );
 }
-

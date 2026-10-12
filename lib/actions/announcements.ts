@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { AnnouncementAudience } from '@/lib/types';
@@ -22,18 +22,24 @@ export async function createAnnouncementAction(prevState: unknown, formData: For
     return { error: 'Title and announcement content are required.' };
   }
 
-  const db = getDb();
   const id = `ann_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO announcements (
-      id, title, content, target_audience, is_pinned, is_archived,
-      publish_at, expires_at, author_id, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
-  `).run(id, title, content, targetAudience, isPinned, now, expiresAt, actor.id, now, now);
+  await insertDocument('announcements', {
+    id,
+    title,
+    content,
+    target_audience: targetAudience,
+    is_pinned: isPinned,
+    is_archived: 0,
+    publish_at: now,
+    expires_at: expiresAt,
+    author_id: actor.id,
+    created_at: now,
+    updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_ANNOUNCEMENT',
@@ -53,12 +59,10 @@ export async function archiveAnnouncementAction(id: string) {
     return { error: 'Unauthorized: You do not have permission to archive announcements.' };
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
-  db.prepare('UPDATE announcements SET is_archived = 1, updated_at = ? WHERE id = ?').run(now, id);
+  await updateDocument('announcements', { id }, { $set: { is_archived: 1, updated_at: now } });
 
   revalidatePath('/announcements');
   revalidatePath('/dashboard');
   return { success: 'Announcement archived.' };
 }
-

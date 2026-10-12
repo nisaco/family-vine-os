@@ -10,10 +10,13 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_PATH
-        value: /var/data/family_vine.db
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: family_vine
       - key: SESSION_SECRET
         generateValue: true
+    # Keep this disk until the existing SQLite database has been migrated and verified.
     disk:
       name: choir-data
       mountPath: /var/data

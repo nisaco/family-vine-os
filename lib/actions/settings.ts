@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { getCollection } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import { parseCurrencyToCents } from '@/lib/utils/currency';
@@ -35,7 +35,6 @@ export async function updateSettingsAction(prevState: unknown, formData: FormDat
     }
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
 
   const updates: [string, string][] = [
@@ -50,18 +49,16 @@ export async function updateSettingsAction(prevState: unknown, formData: FormDat
     ['allow_member_birthday_view', allowBirthdays],
   ];
 
-  const upsert = db.prepare(`
-    INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-  `);
+  const settings = await getCollection('settings');
+  await settings.bulkWrite(updates.map(([key, value]) => ({
+    updateOne: {
+      filter: { key },
+      update: { $set: { key, value, updated_at: now } },
+      upsert: true,
+    },
+  })));
 
-  db.transaction(() => {
-    for (const [k, v] of updates) {
-      upsert.run(k, v, now);
-    }
-  })();
-
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'UPDATE_SETTINGS',
@@ -73,4 +70,3 @@ export async function updateSettingsAction(prevState: unknown, formData: FormDat
   revalidatePath('/dashboard');
   return { success: 'Choir settings updated successfully.' };
 }
-

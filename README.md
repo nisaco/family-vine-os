@@ -53,22 +53,19 @@ The system enforces least-privilege role boundaries on the server across all act
 ## Technical Stack & Architecture
 
 - **Framework**: Next.js 14.2 (App Router with Server Actions & Server Components)
-- **Database**: Relational SQLite via `better-sqlite3`
-  - Write-Ahead Logging (`PRAGMA journal_mode = WAL`)
-  - Strict Foreign Keys (`PRAGMA foreign_keys = ON`)
-  - Normal Synchronous (`PRAGMA synchronous = NORMAL`)
+- **Database**: MongoDB via the official Node.js driver; SQLite is retained only for one-time data migration
 - **Authentication**: Pure Server-Side Sessions with HTTP-only cookies and Bcrypt password hashing (`bcryptjs`)
 - **Financial Arithmetic**: Exact integer minor units (cents / pesewas) to eliminate floating-point arithmetic errors.
 - **Styling**: Tailwind CSS with warm choral palette (burgundy, gold accents, warm stone surfaces)
 - **Icons**: Lucide React
-- **Test Framework**: Vitest with in-memory SQLite isolation
+- **Test Framework**: Vitest
 
 ---
 
 ## Getting Started & Local Setup
 
 ### 1. Prerequisites
-- Node.js 18.x, 20.x, or 22.x
+- Node.js 20.19 or later
 - npm 9+
 
 ### 2. Installation
@@ -86,8 +83,9 @@ cp .env.example .env.local
 
 Default configuration in `.env.example`:
 ```env
-# Database file location (defaults to ./data/family_vine.db)
-DATABASE_PATH=./data/family_vine.db
+# MongoDB connection string. Keep the real value secret; do not commit it.
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-host>/family_vine?retryWrites=true&w=majority
+MONGODB_DB=family_vine
 
 # Authentication secret for signing tokens
 AUTH_SECRET=replace_with_a_secure_random_string_at_least_32_characters_long
@@ -98,18 +96,29 @@ NODE_ENV=development
 
 ### Production database persistence on Render
 
-Administrator accounts and choir data are stored in the SQLite database, not on an individual device. The first-administrator setup is only for an empty database. After setup, every device using the same deployed URL should sign in with the same administrator account; each device has its own session cookie.
+Administrator accounts and choir data are stored in MongoDB, not on an individual device. The first-administrator setup is only for an empty database. After setup, every device using the same deployed URL should sign in with the same administrator account; each device has its own session cookie.
 
-Render must use a persistent disk for the database. The included `render.yaml` configures:
+Set `MONGODB_URI` as a secret in the Render service environment, and set `MONGODB_DB` to the target database name. The included `render.yaml` requests the URI as a non-synced secret and configures `/setup` as the database health check. Do not paste the connection string into source code or commit it.
 
-- `DATABASE_PATH=/var/data/family_vine.db`
-- A persistent disk mounted at `/var/data`
-- `/setup` as the health check, so Render verifies the database is reachable instead of only checking the database-independent sign-in page
+Keep any existing Render disk that contains the source SQLite database until its data is exported and verified in MongoDB. Do not delete or replace a disk containing the source database before migration. After confirming all data in MongoDB, the old disk can be removed from the Render service and configuration.
 
-For an existing Render web service, confirm those settings in the service dashboard. A manually created service does not automatically inherit later changes to `render.yaml`; sync the Blueprint or attach the disk and set the environment variable in the dashboard. The sign-in page can load even when the database is unavailable, so it is not a suitable health check. Do not delete or replace the disk when deploying. If setup appears again on the same deployed URL, verify that the service is using the existing disk and database before initializing another account. A database on Render's temporary filesystem can be lost on redeploy, which also removes its users and choir data.
+For an existing Render web service, add `MONGODB_URI` in the dashboard as a secret environment variable and confirm the selected database name. A manually created service does not automatically inherit later changes to `render.yaml`; sync the Blueprint or update the service environment manually. If setup appears again on the same deployed URL, verify MongoDB is pointing at the correct existing database before initializing another account.
 
-### 4. Database Migrations
-Migrations run automatically upon first database connection, creating all tables, indexes, default categories, and choir settings.
+### 4. Migrating an Existing SQLite Database
+Before switching an existing installation, retain a backup of the current SQLite file. Configure `MONGODB_URI` and optionally `MONGODB_DB` in the shell where you run the command, then run:
+
+```bash
+SQLITE_PATH=/path/to/family_vine.db npm run migrate:mongodb
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:SQLITE_PATH = "D:\path\to\family_vine.db"
+npm run migrate:mongodb
+```
+
+The migration is resumable and does not overwrite MongoDB records. It stops if an existing MongoDB record with the same ID differs from the SQLite record. Verify the per-collection counts printed by the script before removing the old disk. The web application creates MongoDB indexes and seeds default choir settings/categories on its first successful connection. Stop the app before copying its SQLite file so recent WAL writes are included. If migrating the Render disk, run the command from a Render shell with `SQLITE_PATH=/var/data/family_vine.db`; keep the disk until all collection counts are verified. Add the MongoDB Atlas IP access entries for the Render service's outbound IP addresses, and use a dedicated database user with only the permissions this app needs.
 
 ### 5. Initializing the First Administrator
 Security Rule: To prevent unauthorized privilege escalation, there are NO hard-coded or default admin passwords in production.
@@ -137,7 +146,7 @@ To populate a rich, realistic choir dataset for local evaluation:
 npm run seed
 ```
 
-> **Warning:** This command is strictly for local testing. It creates sample accounts with the temporary password `Password123!`:
+> **Warning:** This command requires `MONGODB_URI` and writes demo records to the configured MongoDB database. Use a separate, disposable development database only. It creates sample accounts with the temporary password `Password123!`:
 > - Administrator: `admin@familyvinechoir.org`
 > - President: `president@familyvinechoir.org`
 > - General Secretary: `secretary@familyvinechoir.org`

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { insertDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { Voicing, SongCategory, ResourceType } from '@/lib/types';
@@ -25,18 +25,16 @@ export async function createSongAction(prevState: unknown, formData: FormData) {
     return { error: 'Song title is required.' };
   }
 
-  const db = getDb();
   const id = `sng_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO songs (
-      id, title, composer_or_arranger, voicing, category, key_signature,
-      tempo, lyrics_or_scripture, notes, is_archived, created_by, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
-  `).run(id, title, composer, voicing, category, keySignature, tempo, lyricsOrScripture, notes, actor.id, now, now);
+  await insertDocument('songs', {
+    id, title, composer_or_arranger: composer, voicing, category, key_signature: keySignature,
+    tempo, lyrics_or_scripture: lyricsOrScripture, notes, is_archived: 0,
+    created_by: actor.id, created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_SONG',
@@ -71,16 +69,14 @@ export async function addSongResourceAction(prevState: unknown, formData: FormDa
     return { error: 'Resource URL must be a valid link starting with http:// or https://' };
   }
 
-  const db = getDb();
   const id = `res_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO song_resources (id, song_id, resource_type, title, url, voice_part, target_wing, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, songId, resourceType, title, url, voicePart, targetWing, now);
+  await insertDocument('song_resources', {
+    id, song_id: songId, resource_type: resourceType, title, url, voice_part: voicePart,
+    target_wing: targetWing, created_at: now,
+  });
 
   revalidatePath('/songs');
   return { success: 'Resource link attached successfully.' };
 }
-

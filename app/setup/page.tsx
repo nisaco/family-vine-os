@@ -6,8 +6,8 @@ import { ShieldCheck, ShieldAlert, Music } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-export default function SetupPage() {
-  const isNeeded = isFirstAdminNeeded();
+export default async function SetupPage() {
+  const isNeeded = await isFirstAdminNeeded();
 
   return (
     <div className="min-h-screen bg-[#fdfbf7] flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -60,4 +60,3 @@ export default function SetupPage() {
     </div>
   );
 }
-

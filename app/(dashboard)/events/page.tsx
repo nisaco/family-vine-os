@@ -13,19 +13,17 @@ export default async function EventsPage() {
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
-  const events = getEvents(true);
+  const [settings, events] = await Promise.all([getChoirSettings(), getEvents(true)]);
 
-  const userRsvps: Record<string, EventRsvp> = {};
-  const allRsvpsByEvent: Record<string, EventRsvp[]> = {};
-
-  for (const event of events) {
-    const rsvp = getUserRsvpForEvent(event.id, user.id);
-    if (rsvp) {
-      userRsvps[event.id] = rsvp;
-    }
-    allRsvpsByEvent[event.id] = getEventRsvps(event.id);
-  }
+  const rsvpData = await Promise.all(events.map(async (event) => ({
+    eventId: event.id,
+    userRsvp: await getUserRsvpForEvent(event.id, user.id),
+    allRsvps: await getEventRsvps(event.id),
+  })));
+  const userRsvps = Object.fromEntries(
+    rsvpData.flatMap(({ eventId, userRsvp }) => userRsvp ? [[eventId, userRsvp]] : [])
+  ) as Record<string, EventRsvp>;
+  const allRsvpsByEvent = Object.fromEntries(rsvpData.map(({ eventId, allRsvps }) => [eventId, allRsvps]));
 
   return (
     <EventsClient
@@ -37,4 +35,3 @@ export default async function EventsPage() {
     />
   );
 }
-

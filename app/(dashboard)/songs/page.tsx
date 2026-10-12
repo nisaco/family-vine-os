@@ -12,8 +12,7 @@ export default async function SongsPage() {
     redirect('/login');
   }
 
-  const songs = getSongs();
+  const songs = await getSongs();
 
   return <SongsClient songs={songs} currentUserRole={user.role} />;
 }
-

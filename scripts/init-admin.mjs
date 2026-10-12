@@ -1,134 +1,101 @@
 #!/usr/bin/env node
-import Database from 'better-sqlite3';
+import { MongoClient } from 'mongodb';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
-import path from 'path';
-import fs from 'fs';
-import readline from 'readline';
+import crypto from 'node:crypto';
+import readline from 'node:readline';
 
-const dbPath = process.env.DATABASE_PATH || path.resolve(process.cwd(), 'data', 'family_vine.db');
-
-if (dbPath !== ':memory:') {
-  const dir = path.dirname(dbPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-// Check if any admin or users exist
-const userCount = db.prepare('SELECT count(*) as count FROM users').get();
-if (userCount.count > 0) {
-  console.error('\n[SECURITY ERROR] System is already initialized. First administrator already exists.');
-  console.error('This command can only be used on an uninitialized system to prevent unauthorized privilege escalation.\n');
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+  console.error('MONGODB_URI is required. Set it in your shell or environment; do not put it in source code.');
   process.exit(1);
 }
 
-// Parse command line arguments or prompt
 const args = process.argv.slice(2);
 let email = '';
 let password = '';
 let fullName = '';
-
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--email' && args[i + 1]) email = args[i + 1];
-  if (args[i] === '--password' && args[i + 1]) password = args[i + 1];
-  if (args[i] === '--name' && args[i + 1]) fullName = args[i + 1];
+for (let index = 0; index < args.length; index += 1) {
+  if (args[index] === '--email' && args[index + 1]) email = args[index + 1];
+  if (args[index] === '--password' && args[index + 1]) password = args[index + 1];
+  if (args[index] === '--name' && args[index + 1]) fullName = args[index + 1];
 }
 
-async function prompt(question) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((resolve) => {
-    rl.question(question, (ans) => {
-      rl.close();
-      resolve(ans.trim());
-    });
-  });
+function prompt(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => rl.question(question, (answer) => {
+    rl.close();
+    resolve(answer.trim());
+  }));
 }
 
 async function main() {
-  console.log('=== Family Vine Choir - First Administrator Setup ===');
-  console.log('Setting up the root administrator for your choir installation.\n');
+  const client = new MongoClient(uri, { serverSelectionTimeoutMS: 10000 });
+  try {
+    await client.connect();
+    const db = client.db(process.env.MONGODB_DB || 'family_vine');
+    const users = db.collection('users');
 
-  if (!fullName) {
-    fullName = await prompt('Enter Administrator Full Name (e.g. John Doe): ');
+    await users.createIndex({ id: 1 }, { unique: true });
+    await users.createIndex(
+      { email: 1 },
+      { unique: true, collation: { locale: 'en', strength: 2 } }
+    );
+    await users.createIndex(
+      { is_initial_admin: 1 },
+      { unique: true, partialFilterExpression: { is_initial_admin: true } }
+    );
+    await db.collection('audit_logs').createIndex({ id: 1 }, { unique: true });
+
+    if (await users.countDocuments() > 0) {
+      throw new Error('System is already initialized. The administrator command only works before any users exist.');
+    }
+
+    if (!fullName) fullName = await prompt('Enter Administrator Full Name: ');
+    if (!email) email = await prompt('Enter Administrator Email Address: ');
+    if (!password) password = await prompt('Enter Administrator Password (min 8 characters): ');
+
+    email = email.trim().toLowerCase();
+    if (!email.includes('@')) throw new Error('A valid email address is required.');
+    if (!fullName.trim()) throw new Error('Full name is required.');
+    if (password.length < 8) throw new Error('Password must be at least 8 characters long.');
+
+    const id = `usr_admin_${Date.now()}`;
+    const now = new Date().toISOString();
+    const passwordHash = await bcrypt.hash(password, 10);
+    await users.insertOne({
+      id,
+      email,
+      password_hash: passwordHash,
+      full_name: fullName.trim(),
+      preferred_name: fullName.trim().split(' ')[0],
+      phone: null,
+      voice_part: 'Director',
+      role: 'ADMIN',
+      status: 'ACTIVE',
+      join_date: now.slice(0, 10),
+      created_at: now,
+      updated_at: now,
+      is_initial_admin: true,
+    });
+    await db.collection('audit_logs').insertOne({
+      id: `aud_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
+      actor_id: id,
+      actor_name: fullName.trim(),
+      action: 'INITIALIZE_FIRST_ADMIN',
+      entity_type: 'USER',
+      entity_id: id,
+      details: JSON.stringify({ email, role: 'ADMIN' }),
+      ip_address: null,
+      created_at: now,
+    });
+
+    console.log(`Administrator created successfully for ${email}.`);
+  } finally {
+    await client.close();
   }
-  if (!email) {
-    email = await prompt('Enter Administrator Email Address: ');
-  }
-  if (!password) {
-    password = await prompt('Enter Administrator Password (min 8 characters): ');
-  }
-
-  if (!email || !email.includes('@')) {
-    console.error('Error: A valid email address is required.');
-    process.exit(1);
-  }
-
-  if (!fullName) {
-    console.error('Error: Full name is required.');
-    process.exit(1);
-  }
-
-  if (!password || password.length < 8) {
-    console.error('Error: Password must be at least 8 characters long.');
-    process.exit(1);
-  }
-
-  const id = `usr_admin_${Date.now()}`;
-  const now = new Date().toISOString();
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  db.prepare(`
-    INSERT INTO users (
-      id, email, password_hash, full_name, preferred_name, phone, voice_part,
-      role, status, join_date, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    email.toLowerCase(),
-    passwordHash,
-    fullName,
-    fullName.split(' ')[0],
-    null,
-    'Director',
-    'ADMIN',
-    'ACTIVE',
-    now.slice(0, 10),
-    now,
-    now
-  );
-
-  // Log audit entry
-  const audId = `aud_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  db.prepare(`
-    INSERT INTO audit_logs (id, actor_id, actor_name, action, entity_type, entity_id, details, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    audId,
-    id,
-    fullName,
-    'INITIALIZE_FIRST_ADMIN',
-    'USER',
-    id,
-    JSON.stringify({ email: email.toLowerCase(), role: 'ADMIN' }),
-    now
-  );
-
-  console.log('\n[SUCCESS] First administrator created successfully!');
-  console.log(`- Email: ${email}`);
-  console.log(`- Role: ADMIN`);
-  console.log('\nYou can now start the application and sign in with these credentials.');
 }
 
-main().catch((err) => {
-  console.error('Failed to initialize administrator:', err);
-  process.exit(1);
+main().catch((error) => {
+  console.error('Failed to initialize administrator:', error.message);
+  process.exitCode = 1;
 });
-

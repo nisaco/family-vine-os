@@ -12,7 +12,7 @@ export default async function MinutesPage() {
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
+  const settings = await getChoirSettings();
 
   const isOfficer =
     user.role === 'ADMIN' ||
@@ -21,9 +21,11 @@ export default async function MinutesPage() {
     user.role === 'FINANCIAL_SECRETARY' ||
     user.role === 'TREASURER';
 
-  const meetings = getMeetings(isOfficer);
-  const actionItems = getActionItems();
-  const members = getAllMembers(user.role, user.id);
+  const [meetings, actionItems, members] = await Promise.all([
+    getMeetings(isOfficer),
+    getActionItems(),
+    getAllMembers(user.role, user.id),
+  ]);
 
   return (
     <MinutesClient
@@ -36,4 +38,3 @@ export default async function MinutesPage() {
     />
   );
 }
-

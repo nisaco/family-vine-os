@@ -17,8 +17,7 @@ export default async function SettingsPage() {
     redirect('/dashboard');
   }
 
-  const settings = getChoirSettings();
-  const auditLogs = getAuditLogs(100, 0);
+  const [settings, auditLogs] = await Promise.all([getChoirSettings(), getAuditLogs(100, 0)]);
 
   return (
     <SettingsClient
@@ -28,4 +27,3 @@ export default async function SettingsPage() {
     />
   );
 }
-

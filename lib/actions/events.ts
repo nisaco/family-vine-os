@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { findOne, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { EventType, RsvpStatus } from '@/lib/types';
@@ -27,18 +27,17 @@ export async function createEventAction(prevState: unknown, formData: FormData) 
     return { error: 'Title, event type, date/time, and location are required.' };
   }
 
-  const db = getDb();
   const id = `evt_${Date.now()}`;
   const now = new Date().toISOString();
 
-  db.prepare(`
-    INSERT INTO events (
-      id, title, event_type, target_wing, start_time, end_time, call_time, attire_notes, location, description,
-      organizer_id, rsvp_deadline, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SCHEDULED', ?, ?)
-  `).run(id, title, eventType, targetWing === 'ALL' ? null : targetWing, startTime, endTime, callTime, attireNotes, location, description, actor.id, rsvpDeadline, now, now);
+  await insertDocument('events', {
+    id, title, event_type: eventType, target_wing: targetWing === 'ALL' ? null : targetWing,
+    start_time: startTime, end_time: endTime, call_time: callTime, attire_notes: attireNotes,
+    location, description, organizer_id: actor.id, rsvp_deadline: rsvpDeadline,
+    status: 'SCHEDULED', created_at: now, updated_at: now,
+  });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CREATE_EVENT',
@@ -66,16 +65,11 @@ export async function updateEventAttireAction(prevState: unknown, formData: Form
     return { error: 'Event identifier is required.' };
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
 
-  db.prepare(`
-    UPDATE events
-    SET attire_notes = ?, call_time = ?, updated_at = ?
-    WHERE id = ?
-  `).run(attireNotes, callTime, now, eventId);
+  await updateDocument('events', { id: eventId }, { $set: { attire_notes: attireNotes, call_time: callTime, updated_at: now } });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'UPDATE_EVENT_ATTIRE',
@@ -95,14 +89,11 @@ export async function cancelEventAction(eventId: string) {
     return { error: 'Unauthorized: You do not have permission to cancel events.' };
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
 
-  db.prepare(`
-    UPDATE events SET status = 'CANCELLED', updated_at = ? WHERE id = ?
-  `).run(now, eventId);
+  await updateDocument('events', { id: eventId }, { $set: { status: 'CANCELLED', updated_at: now } });
 
-  logAudit({
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'CANCEL_EVENT',
@@ -129,8 +120,7 @@ export async function submitRsvpAction(prevState: unknown, formData: FormData) {
     return { error: 'Event and RSVP response are required.' };
   }
 
-  const db = getDb();
-  const event = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId) as { status: string } | undefined;
+  const event = await findOne<{ status: string }>('events', { id: eventId });
   if (!event || event.status === 'CANCELLED') {
     return { error: 'Cannot RSVP to a cancelled or non-existent event.' };
   }
@@ -138,17 +128,12 @@ export async function submitRsvpAction(prevState: unknown, formData: FormData) {
   const now = new Date().toISOString();
   const id = `rsvp_${eventId}_${actor.id}`;
 
-  db.prepare(`
-    INSERT INTO event_rsvps (id, event_id, user_id, status, apology_reason, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(event_id, user_id) DO UPDATE SET
-      status = excluded.status,
-      apology_reason = excluded.apology_reason,
-      updated_at = excluded.updated_at
-  `).run(id, eventId, actor.id, status, apologyReason, now, now);
+  await updateDocument('event_rsvps', { event_id: eventId, user_id: actor.id }, {
+    $set: { status, apology_reason: apologyReason, updated_at: now },
+    $setOnInsert: { id, event_id: eventId, user_id: actor.id, created_at: now },
+  });
 
   revalidatePath('/events');
   revalidatePath('/dashboard');
   return { success: 'Your RSVP has been recorded.' };
 }
-

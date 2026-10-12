@@ -1,8 +1,7 @@
 import React from 'react';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { getUserAttendanceStats, getChoirSettings } from '@/lib/data';
-import { getDb } from '@/lib/db';
+import { getUserAttendanceStats, getUserAttendanceHistory, getChoirSettings } from '@/lib/data';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatDateTime } from '@/lib/utils/timezone';
@@ -16,17 +15,11 @@ export default async function MyAttendancePage() {
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
-  const stats = getUserAttendanceStats(user.id);
-
-  const db = getDb();
-  const records = db.prepare(`
-    SELECT a.*, e.title as event_title, e.start_time as event_start_time, e.event_type
-    FROM attendance_records a
-    JOIN events e ON a.event_id = e.id
-    WHERE a.user_id = ?
-    ORDER BY e.start_time DESC
-  `).all(user.id) as Array<AttendanceRecord & { event_title: string; event_start_time: string; event_type: string }>;
+  const [settings, stats, records] = await Promise.all([
+    getChoirSettings(),
+    getUserAttendanceStats(user.id),
+    getUserAttendanceHistory(user.id),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -124,4 +117,3 @@ export default async function MyAttendancePage() {
     </div>
   );
 }
-

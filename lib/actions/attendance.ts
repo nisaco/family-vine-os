@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getDb } from '@/lib/db';
+import { findOne, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { AttendanceStatus } from '@/lib/types';
@@ -17,19 +17,13 @@ export async function saveSingleAttendanceAction(
     return { error: 'Unauthorized: You do not have permission to record attendance.' };
   }
 
-  const db = getDb();
   const now = new Date().toISOString();
   const id = `att_${eventId}_${userId}`;
 
-  db.prepare(`
-    INSERT INTO attendance_records (id, event_id, user_id, status, notes, recorded_by, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(event_id, user_id) DO UPDATE SET
-      status = excluded.status,
-      notes = excluded.notes,
-      recorded_by = excluded.recorded_by,
-      updated_at = excluded.updated_at
-  `).run(id, eventId, userId, status, notes || null, actor.id, now, now);
+  await updateDocument('attendance_records', { event_id: eventId, user_id: userId }, {
+    $set: { status, notes: notes || null, recorded_by: actor.id, updated_at: now },
+    $setOnInsert: { id, event_id: eventId, user_id: userId, created_at: now },
+  });
 
   revalidatePath('/attendance');
   revalidatePath('/dashboard');
@@ -50,35 +44,33 @@ export async function correctAttendanceAction(
     return { error: 'A correction reason is required for audit verification.' };
   }
 
-  const db = getDb();
-  const existing = db.prepare(`
-    SELECT a.*, u.full_name as user_name
-    FROM attendance_records a
-    JOIN users u ON a.user_id = u.id
-    WHERE a.id = ?
-  `).get(recordId) as { status: string; user_name: string; event_id: string } | undefined;
+  const existing = await findOne<{ status: string; event_id: string; user_id: string }>(
+    'attendance_records',
+    { id: recordId }
+  );
 
   if (!existing) {
     return { error: 'Attendance record not found.' };
   }
 
-  const now = new Date().toISOString();
-  db.prepare(`
-    UPDATE attendance_records SET
-      status = ?,
-      notes = ?,
-      updated_at = ?
-    WHERE id = ?
-  `).run(newStatus, `Corrected by ${actor.full_name}: ${reason}`, now, recordId);
+  const member = await findOne<{ full_name: string }>('users', { id: existing.user_id });
+  if (!member) {
+    return { error: 'Member for this attendance record was not found.' };
+  }
 
-  logAudit({
+  const now = new Date().toISOString();
+  await updateDocument('attendance_records', { id: recordId }, {
+    $set: { status: newStatus, notes: `Corrected by ${actor.full_name}: ${reason}`, updated_at: now },
+  });
+
+  await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'ATTENDANCE_CORRECTED',
     entityType: 'ATTENDANCE_RECORD',
     entityId: recordId,
     details: {
-      member: existing.user_name,
+      member: member.full_name,
       previousStatus: existing.status,
       newStatus,
       reason,
@@ -90,4 +82,3 @@ export async function correctAttendanceAction(
   revalidatePath('/dashboard');
   return { success: 'Attendance corrected and audit log recorded.' };
 }
-

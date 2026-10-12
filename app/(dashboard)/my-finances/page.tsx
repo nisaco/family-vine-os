@@ -12,8 +12,10 @@ export default async function MyFinancesPage() {
     redirect('/login');
   }
 
-  const settings = getChoirSettings();
-  const summary = getUserPaymentSummary(user.id);
+  const [settings, summary] = await Promise.all([
+    getChoirSettings(),
+    getUserPaymentSummary(user.id),
+  ]);
 
   return (
     <MyFinancesClient
@@ -27,4 +29,3 @@ export default async function MyFinancesPage() {
     />
   );
 }
-
