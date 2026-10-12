@@ -9,6 +9,15 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["better-sqlite3", "bcryptjs"],
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/login',
+        permanent: false,
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve.alias['@'] = path.resolve(__dirname);
     return config;
@@ -16,4 +25,3 @@ const nextConfig = {
 };
 
 export default nextConfig;
-
