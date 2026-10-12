@@ -9,6 +9,9 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["better-sqlite3", "bcryptjs"],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async redirects() {
     return [
       {

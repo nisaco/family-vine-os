@@ -13,14 +13,28 @@ const globalForMongo = globalThis as typeof globalThis & {
 };
 
 function getMongoSettings() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
+  const rawUri =
+    process.env.MONGODB_URI ||
+    process.env.MONGODB_URL ||
+    process.env.MONGO_URI ||
+    process.env.MONGO_URL ||
+    process.env.DATABASE_URL;
+
+  if (!rawUri || !rawUri.trim()) {
     throw new Error('MONGODB_URI must be configured to connect to the application database.');
+  }
+
+  let uri = rawUri.trim();
+  if (
+    (uri.startsWith('"') && uri.endsWith('"')) ||
+    (uri.startsWith("'") && uri.endsWith("'"))
+  ) {
+    uri = uri.slice(1, -1).trim();
   }
 
   return {
     uri,
-    databaseName: process.env.MONGODB_DB || 'family_vine',
+    databaseName: process.env.MONGODB_DB || process.env.MONGO_DB || 'family_vine',
   };
 }
 

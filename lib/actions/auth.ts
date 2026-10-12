@@ -23,43 +23,48 @@ export async function signInAction(prevState: unknown, formData: FormData) {
     return { error: 'Please enter both your email address and password.' };
   }
 
-  const user = await findOne<User>(
-    'users',
-    { email },
-    { collation: { locale: 'en', strength: 2 } }
-  );
+  try {
+    const user = await findOne<User>(
+      'users',
+      { email },
+      { collation: { locale: 'en', strength: 2 } }
+    );
 
-  if (!user) {
-    return { error: 'Invalid email or password.' };
+    if (!user) {
+      return { error: 'Invalid email or password.' };
+    }
+
+    if (user.status !== 'ACTIVE') {
+      return { error: 'This account has been deactivated. Please contact your choir administrator.' };
+    }
+
+    const isMatch = await verifyPassword(password, user.password_hash);
+    if (!isMatch) {
+      return { error: 'Invalid email or password.' };
+    }
+
+    // Create session
+    const { token, session } = await createSession(user.id);
+    const cookieStore = cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: new Date(session.expires_at),
+    });
+
+    await logAudit({
+      actorId: user.id,
+      actorName: user.full_name,
+      action: 'USER_SIGN_IN',
+      entityType: 'SESSION',
+      entityId: session.id,
+    });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Database error';
+    return { error: `Authentication service unavailable: ${msg}` };
   }
-
-  if (user.status !== 'ACTIVE') {
-    return { error: 'This account has been deactivated. Please contact your choir administrator.' };
-  }
-
-  const isMatch = await verifyPassword(password, user.password_hash);
-  if (!isMatch) {
-    return { error: 'Invalid email or password.' };
-  }
-
-  // Create session
-  const { token, session } = await createSession(user.id);
-  const cookieStore = cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    expires: new Date(session.expires_at),
-  });
-
-  await logAudit({
-    actorId: user.id,
-    actorName: user.full_name,
-    action: 'USER_SIGN_IN',
-    entityType: 'SESSION',
-    entityId: session.id,
-  });
 
   redirect('/dashboard');
 }
@@ -86,10 +91,6 @@ export async function signOutAction() {
 }
 
 export async function setupFirstAdminAction(prevState: unknown, formData: FormData) {
-  if (!(await isFirstAdminNeeded())) {
-    return { error: 'Administrator already exists. Initial setup is locked.' };
-  }
-
   const fullName = (formData.get('fullName') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const password = formData.get('password') as string;
@@ -111,11 +112,15 @@ export async function setupFirstAdminAction(prevState: unknown, formData: FormDa
     return { error: 'Passwords do not match.' };
   }
 
-  const id = `usr_admin_${Date.now()}`;
-  const now = new Date().toISOString();
-  const passwordHash = await hashPassword(password);
-
   try {
+    if (!(await isFirstAdminNeeded())) {
+      return { error: 'Administrator already exists. Initial setup is locked.' };
+    }
+
+    const id = `usr_admin_${Date.now()}`;
+    const now = new Date().toISOString();
+    const passwordHash = await hashPassword(password);
+
     await insertDocument('users', {
       id,
       email,
@@ -131,31 +136,32 @@ export async function setupFirstAdminAction(prevState: unknown, formData: FormDa
       updated_at: now,
       is_initial_admin: true,
     });
+
+    await logAudit({
+      actorId: id,
+      actorName: fullName,
+      action: 'INITIALIZE_FIRST_ADMIN',
+      entityType: 'USER',
+      entityId: id,
+      details: { email, role: 'ADMIN' },
+    });
+
+    const { token, session } = await createSession(id);
+    const cookieStore = cookies();
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      expires: new Date(session.expires_at),
+    });
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
       return { error: 'Administrator already exists. Initial setup is locked.' };
     }
-    throw error;
+    const msg = error instanceof Error ? error.message : 'Database error';
+    return { error: `Setup failed: ${msg}` };
   }
-
-  await logAudit({
-    actorId: id,
-    actorName: fullName,
-    action: 'INITIALIZE_FIRST_ADMIN',
-    entityType: 'USER',
-    entityId: id,
-    details: { email, role: 'ADMIN' },
-  });
-
-  const { token, session } = await createSession(id);
-  const cookieStore = cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    expires: new Date(session.expires_at),
-  });
 
   redirect('/dashboard');
 }
