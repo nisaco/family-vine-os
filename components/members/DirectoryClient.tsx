@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button, SubmitButton } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { MemberImport } from '@/components/members/MemberImport';
 import {
   Search,
   UserPlus,
@@ -149,10 +150,13 @@ export function DirectoryClient({
         </div>
 
         {canManageMembers && (
-          <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
-            <UserPlus className="w-4 h-4 mr-1.5" />
-            Add Member
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <MemberImport members={members} />
+            <Button onClick={() => setIsCreateOpen(true)} className="w-full sm:w-auto">
+              <UserPlus className="w-4 h-4 mr-1.5" />
+              Add Member
+            </Button>
+          </div>
         )}
       </div>
 

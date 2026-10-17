@@ -1,10 +1,23 @@
 'use server';
 
+import crypto from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { deleteDocuments, findOne, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
 import type { UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
+import { normalizeMemberWing, type ImportedMember } from '@/lib/utils/member-import';
+
+type MemberImportResolution = 'import' | 'update' | 'skip';
+
+interface MemberImportRow extends ImportedMember {
+  resolution: MemberImportResolution;
+}
+
+interface MemberImportRowResult {
+  status: 'created' | 'updated' | 'skipped';
+  message: string;
+}
 
 export async function createMemberAction(prevState: unknown, formData: FormData) {
   const actor = await getCurrentUser();
@@ -184,4 +197,183 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
 
   revalidatePath('/directory');
   return { success: `Member account status changed to ${newStatus}.` };
+}
+
+export async function importMembersAction(rows: MemberImportRow[], temporaryPassword: string) {
+  const actor = await getCurrentUser();
+  if (!actor || (!hasPermission(actor.role, 'MANAGE_USERS') && actor.role !== 'GENERAL_SECRETARY')) {
+    return { error: 'Unauthorized: You do not have permission to import members.' };
+  }
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 250) {
+    return { error: 'Choose a file containing between 1 and 250 member rows.' };
+  }
+  if (typeof temporaryPassword !== 'string' || temporaryPassword.length < 8 || temporaryPassword.length > 72) {
+    return { error: 'The temporary password must be between 8 and 72 characters.' };
+  }
+
+  const results: MemberImportRowResult[] = [];
+  let passwordHash: string | undefined;
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const input = rows[index];
+    if (!input || typeof input !== 'object') {
+      results.push({ status: 'skipped', message: 'Invalid row; skipped.' });
+      continue;
+    }
+
+    const value = (field: keyof ImportedMember, limit: number) => {
+      const item = input[field];
+      return typeof item === 'string' ? item.trim().slice(0, limit) : '';
+    };
+    const resolution = input.resolution;
+    if (resolution !== 'import' && resolution !== 'update' && resolution !== 'skip') {
+      results.push({ status: 'skipped', message: 'Invalid import choice; skipped.' });
+      continue;
+    }
+    if (resolution === 'skip') {
+      results.push({ status: 'skipped', message: 'Skipped by choice.' });
+      continue;
+    }
+
+    const fullName = value('fullName', 200);
+    const email = value('email', 254).toLowerCase();
+    if (!fullName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      results.push({ status: 'skipped', message: 'A valid name and email are required.' });
+      continue;
+    }
+
+    const existing = await findOne<{ id: string; role: UserRole; wing: MinistryWing | null }>(
+      'users',
+      { email },
+      { collation: { locale: 'en', strength: 2 } }
+    );
+    if (existing) {
+      if (resolution !== 'update') {
+        results.push({ status: 'skipped', message: 'Email already exists; choose Update or Skip.' });
+        continue;
+      }
+
+      const rawWing = value('wing', 80);
+      const wing = normalizeMemberWing(rawWing);
+      if (rawWing && !wing) {
+        results.push({ status: 'skipped', message: 'Unrecognized ministry wing; choose a supported wing and try again.' });
+        continue;
+      }
+      const wingRole = value('wingRole', 100);
+      const effectiveWing = wing || existing.wing;
+      const updates: Record<string, unknown> = {};
+      const optionalValues: Array<[keyof ImportedMember, string, number]> = [
+        ['preferredName', 'preferred_name', 100],
+        ['phone', 'phone', 60],
+        ['birthDate', 'birth_date', 30],
+        ['joinDate', 'join_date', 30],
+        ['address', 'address', 500],
+        ['emergencyContactName', 'emergency_contact_name', 200],
+        ['emergencyContactPhone', 'emergency_contact_phone', 60],
+        ['officerNotes', 'officer_notes', 2000],
+      ];
+      updates.full_name = fullName;
+      for (const [field, column, limit] of optionalValues) {
+        const optional = value(field, limit);
+        if (optional) updates[column] = optional;
+      }
+      if (wing) updates.wing = wing;
+      if (wingRole) updates.wing_role = wingRole;
+      if (wingRole && effectiveWing === 'Family of Praise') {
+        updates.voice_part = asVoicePart(wingRole);
+      } else if (wing && wing !== 'Family of Praise') {
+        updates.voice_part = null;
+      }
+      updates.updated_at = new Date().toISOString();
+
+      await updateDocument('users', { id: existing.id }, { $set: updates });
+      await logAudit({
+        actorId: actor.id,
+        actorName: actor.full_name,
+        action: 'UPDATE_MEMBER',
+        entityType: 'USER',
+        entityId: existing.id,
+        details: { source: 'member_import', row: index + 1 },
+      });
+      results.push({ status: 'updated', message: 'Matched member updated.' });
+      continue;
+    }
+
+    if (resolution === 'update') {
+      results.push({ status: 'skipped', message: 'No matching member was found to update.' });
+      continue;
+    }
+
+    const rawWing = value('wing', 80);
+    const wing = normalizeMemberWing(rawWing);
+    if (rawWing && !wing) {
+      results.push({ status: 'skipped', message: 'Unrecognized ministry wing; choose a supported wing and try again.' });
+      continue;
+    }
+    const wingRole = value('wingRole', 100) || 'Member';
+    passwordHash ||= await hashPassword(temporaryPassword);
+    const now = new Date().toISOString();
+    const id = `usr_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
+
+    try {
+      await insertDocument('users', {
+        id,
+        email,
+        password_hash: passwordHash,
+        full_name: fullName,
+        preferred_name: value('preferredName', 100) || fullName.split(/\s+/)[0],
+        phone: value('phone', 60) || null,
+        wing: wing || 'Family of Praise',
+        wing_role: wingRole,
+        voice_part: (wing || 'Family of Praise') === 'Family of Praise' ? asVoicePart(wingRole) : null,
+        role: 'MEMBER',
+        status: 'ACTIVE',
+        address: value('address', 500) || null,
+        emergency_contact_name: value('emergencyContactName', 200) || null,
+        emergency_contact_phone: value('emergencyContactPhone', 60) || null,
+        officer_notes: value('officerNotes', 2000) || null,
+        birth_date: value('birthDate', 30) || null,
+        join_date: value('joinDate', 30) || now.slice(0, 10),
+        created_at: now,
+        updated_at: now,
+      });
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+        results.push({ status: 'skipped', message: 'Email already exists; review the duplicate and try again.' });
+        continue;
+      }
+      throw error;
+    }
+
+    await logAudit({
+      actorId: actor.id,
+      actorName: actor.full_name,
+      action: 'CREATE_MEMBER',
+      entityType: 'USER',
+      entityId: id,
+      details: { source: 'member_import', row: index + 1 },
+    });
+    results.push({ status: 'created', message: 'Member added.' });
+  }
+
+  revalidatePath('/directory');
+  return {
+    rows: results,
+    created: results.filter((row) => row.status === 'created').length,
+    updated: results.filter((row) => row.status === 'updated').length,
+    skipped: results.filter((row) => row.status === 'skipped').length,
+  };
+}
+
+function asVoicePart(value: string): VoicePart | null {
+  const validParts: VoicePart[] = [
+    'Soprano',
+    'Alto',
+    'Tenor',
+    'Bass',
+    'Choir Director',
+    'Musician',
+    'General',
+  ];
+  return validParts.find((part) => part.toLowerCase() === value.toLowerCase()) || null;
 }
