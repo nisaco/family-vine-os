@@ -165,6 +165,9 @@ export function Navigation({ user, choirName }: NavigationProps) {
     FINANCIAL_SECRETARY: 'Financial Secretary',
     TREASURER: 'Treasurer',
     WELFARE_OFFICER: 'Welfare Officer',
+    CHIEF_ASAPHITE: 'Chief Asaphite',
+    PRAYER_DIRECTOR: 'Prayer Director',
+    MUSIC_DIRECTOR: 'Music Director',
     MEMBER: 'Choir Member',
   };
 

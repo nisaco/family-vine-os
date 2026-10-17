@@ -542,6 +542,9 @@ export function DirectoryClient({
                   <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
                   <option value="TREASURER">Treasurer</option>
                   <option value="WELFARE_OFFICER">Welfare Officer</option>
+                  <option value="CHIEF_ASAPHITE">Chief Asaphite</option>
+                  <option value="PRAYER_DIRECTOR">Prayer Director</option>
+                  <option value="MUSIC_DIRECTOR">Music Director</option>
                   <option value="ADMIN">Administrator</option>
                 </>
               )}
@@ -678,6 +681,9 @@ export function DirectoryClient({
                     <option value="FINANCIAL_SECRETARY">Financial Secretary</option>
                     <option value="TREASURER">Treasurer</option>
                     <option value="WELFARE_OFFICER">Welfare Officer</option>
+                    <option value="CHIEF_ASAPHITE">Chief Asaphite</option>
+                    <option value="PRAYER_DIRECTOR">Prayer Director</option>
+                    <option value="MUSIC_DIRECTOR">Music Director</option>
                     <option value="ADMIN">Administrator</option>
                   </>
                 )}

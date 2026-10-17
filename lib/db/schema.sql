@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   wing TEXT, -- 'Family of Praise' (Choir), 'Asaphites' (Instrumentalists), 'Vimmies' (Dancers), 'General Leadership'
   wing_role TEXT, -- Voice part, Instrument, or Dance specialty
   voice_part TEXT, -- Legacy voice part compatibility
-  role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'MEMBER')),
+  role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'CHIEF_ASAPHITE', 'PRAYER_DIRECTOR', 'MUSIC_DIRECTOR', 'MEMBER')),
   status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
   address TEXT,
   emergency_contact_name TEXT,

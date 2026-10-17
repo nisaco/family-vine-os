@@ -5,6 +5,9 @@ export type UserRole =
   | 'FINANCIAL_SECRETARY'
   | 'TREASURER'
   | 'WELFARE_OFFICER'
+  | 'CHIEF_ASAPHITE'
+  | 'PRAYER_DIRECTOR'
+  | 'MUSIC_DIRECTOR'
   | 'MEMBER';
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
