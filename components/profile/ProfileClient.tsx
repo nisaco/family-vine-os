@@ -41,7 +41,7 @@ export function ProfileClient({ user }: ProfileClientProps) {
               <Badge variant="gold">{user.role.replace('_', ' ')}</Badge>
             </div>
             <p className="text-xs text-stone-500 mt-0.5">
-              {user.email} • {user.voice_part || 'General Section'}
+              {user.email || 'No email assigned'} • {user.voice_part || 'General Section'}
             </p>
           </div>
         </div>
@@ -171,4 +171,3 @@ export function ProfileClient({ user }: ProfileClientProps) {
     </div>
   );
 }
-

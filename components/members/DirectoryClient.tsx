@@ -99,7 +99,7 @@ export function DirectoryClient({
   const filtered = members.filter((m) => {
     const matchesSearch =
       m.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.phone && m.phone.includes(searchTerm));
 
     const matchesWing =
@@ -270,7 +270,12 @@ export function DirectoryClient({
                         return null;
                       })()}
                     </div>
-                    {member.status === 'INACTIVE' && (
+                    {!member.has_login_credentials && (
+                      <Badge variant="warning" size="sm">
+                        Login setup needed
+                      </Badge>
+                    )}
+                    {member.status === 'INACTIVE' && member.has_login_credentials && (
                       <Badge variant="danger" size="sm">
                         Deactivated
                       </Badge>
@@ -285,7 +290,7 @@ export function DirectoryClient({
                   </div>
                   <div className="flex items-center gap-2 truncate">
                     <Mail className="w-3.5 h-3.5 text-stone-400 flex-shrink-0" />
-                    <span className="truncate">{member.email}</span>
+                    <span className="truncate">{member.email || 'No email assigned'}</span>
                   </div>
                   {member.phone && (
                     <div className="flex items-center gap-2">
@@ -396,7 +401,7 @@ export function DirectoryClient({
                   Email
                 </span>
                 <span className="font-medium text-stone-900 truncate block">
-                  {selectedMember.email}
+                  {selectedMember.email || 'Not assigned'}
                 </span>
               </div>
               <div>
@@ -603,7 +608,20 @@ export function DirectoryClient({
             )}
 
             <Input label="Full Name" name="fullName" defaultValue={selectedMember.full_name} required />
-            <Input label="Email Address" name="email" type="email" defaultValue={selectedMember.email} required />
+            <Input label="Email Address" name="email" type="email" defaultValue={selectedMember.email || ''} />
+            <Input
+              label="Set or reset password (optional)"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              placeholder="At least 8 characters"
+            />
+            {!selectedMember.has_login_credentials && (
+              <p className="text-xs text-stone-500">
+                Add an email and set a password to enable this member&apos;s login.
+              </p>
+            )}
             <Input label="Phone" name="phone" defaultValue={selectedMember.phone || ''} />
 
             <div className="grid grid-cols-2 gap-3">

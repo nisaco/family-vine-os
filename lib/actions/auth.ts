@@ -38,7 +38,7 @@ export async function signInAction(prevState: unknown, formData: FormData) {
       return { error: 'This account has been deactivated. Please contact your choir administrator.' };
     }
 
-    const isMatch = await verifyPassword(password, user.password_hash);
+    const isMatch = user.password_hash ? await verifyPassword(password, user.password_hash) : false;
     if (!isMatch) {
       return { error: 'Invalid email or password.' };
     }
@@ -226,7 +226,9 @@ export async function changePasswordAction(prevState: unknown, formData: FormDat
     return { error: 'New passwords do not match.' };
   }
 
-  const isMatch = await verifyPassword(currentPassword, user.password_hash);
+  const isMatch = user.password_hash
+    ? await verifyPassword(currentPassword, user.password_hash)
+    : false;
   if (!isMatch) {
     return { error: 'Current password is incorrect.' };
   }

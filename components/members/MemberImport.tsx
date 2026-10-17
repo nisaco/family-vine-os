@@ -56,14 +56,13 @@ export function MemberImport({ members }: MemberImportProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [fileName, setFileName] = useState('');
-  const [temporaryPassword, setTemporaryPassword] = useState('Choir2026!');
   const [error, setError] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [summary, setSummary] = useState('');
 
   const existingByEmail = useMemo(
-    () => new Map(members.map((member) => [member.email.toLowerCase(), member])),
+    () => new Map(members.flatMap((member) => member.email ? [[member.email.toLowerCase(), member] as const] : [])),
     [members]
   );
   const earlierRowsByEmail = useMemo(() => {
@@ -111,7 +110,7 @@ export function MemberImport({ members }: MemberImportProps) {
 
       const membersFromFile = mapMemberGrid(grid);
       if (!membersFromFile.length) {
-        throw new Error('No member rows were found. Use a table with a header row such as Name and Email.');
+        throw new Error('No member rows were found. Use a table with a header row such as Name; Email is optional.');
       }
       if (membersFromFile.length > MAX_ROWS) {
         throw new Error(`This file has ${membersFromFile.length} rows. Import up to ${MAX_ROWS} members at a time.`);
@@ -157,16 +156,10 @@ export function MemberImport({ members }: MemberImportProps) {
   const handleImport = async () => {
     setError('');
     setSummary('');
-    if (temporaryPassword.length < 8) {
-      setError('The temporary password must be at least 8 characters.');
-      return;
-    }
-
     setIsSaving(true);
     try {
       const result = await importMembersAction(
-        rows.map(({ id, result: _result, ...row }) => row),
-        temporaryPassword
+        rows.map(({ id, result: _result, ...row }) => row)
       );
       if ('error' in result) {
         setError(result.error || 'The import could not be completed.');
@@ -204,8 +197,8 @@ export function MemberImport({ members }: MemberImportProps) {
           <div className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600">
             Use a header row with names such as Name/Full Name, Email, Phone, Wing/Ministry, Voice Part, Birth Date/DOB,
             Join Date, Address, Emergency Contact Name/Phone, and Notes. Word documents should use a table.
-            Name and email are required; other directory details are optional. Empty fields do not erase existing details when updating.
-            New members receive system defaults for omitted account fields.
+            Name is required; email and other directory details are optional. Imported members without login details are saved as inactive directory records.
+            You can add their email and set a password later from Edit Member; empty fields do not erase existing details when updating.
           </div>
 
           <label className="block">
@@ -225,19 +218,8 @@ export function MemberImport({ members }: MemberImportProps) {
             <>
               <div className="flex flex-col gap-2 rounded-lg border border-stone-200 p-3 sm:flex-row sm:items-end sm:justify-between">
                 <p className="text-xs text-stone-600">
-                  {rows.length} record{rows.length === 1 ? '' : 's'} found. Review duplicate choices and correct missing names or emails.
+                  {rows.length} record{rows.length === 1 ? '' : 's'} found. Review duplicate choices and correct missing names or invalid emails.
                 </p>
-                <label className="text-xs font-semibold text-stone-700">
-                  Shared temporary password for new accounts
-                  <span className="mt-1 block font-normal text-stone-500">All new accounts in this import start with this password.</span>
-                  <input
-                    type="password"
-                    value={temporaryPassword}
-                    onChange={(event) => setTemporaryPassword(event.target.value)}
-                    minLength={8}
-                    className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2 text-sm font-normal"
-                  />
-                </label>
               </div>
 
               <div className="max-h-[45vh] overflow-auto rounded-lg border border-stone-200">
@@ -245,7 +227,7 @@ export function MemberImport({ members }: MemberImportProps) {
                   <thead className="sticky top-0 bg-stone-100 text-stone-700">
                     <tr>
                       <th className="p-2">Name *</th>
-                      <th className="p-2">Email *</th>
+                      <th className="p-2">Email (optional)</th>
                       <th className="p-2">Phone</th>
                       <th className="p-2">Wing / Role</th>
                       <th className="p-2">Duplicate resolution</th>
@@ -258,7 +240,7 @@ export function MemberImport({ members }: MemberImportProps) {
                       const earlierId = email ? earlierRowsByEmail.get(email) : undefined;
                       const earlier = earlierId !== undefined && earlierId !== row.id;
                       const duplicate = Boolean(existing || earlier);
-                      const missingRequired = !row.fullName.trim() || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+                      const invalidEmail = Boolean(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
                       return (
                         <tr key={row.id} className="border-t border-stone-100 align-top">
                           <td className="p-2">
@@ -277,7 +259,8 @@ export function MemberImport({ members }: MemberImportProps) {
                               onChange={(event) => updateRow(row.id, { email: event.target.value })}
                               className="w-48 rounded border border-stone-300 px-2 py-1.5"
                             />
-                            {missingRequired && <span className="mt-1 block text-rose-700">Enter a valid name and email, or skip.</span>}
+                            {!row.fullName.trim() && <span className="mt-1 block text-rose-700">Enter a member name or skip.</span>}
+                            {invalidEmail && <span className="mt-1 block text-rose-700">Enter a valid email or clear the field.</span>}
                           </td>
                           <td className="p-2">{row.phone || '—'}</td>
                           <td className="p-2">

@@ -99,6 +99,7 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   const memberId = formData.get('memberId') as string;
   const fullName = (formData.get('fullName') as string)?.trim();
   const email = (formData.get('email') as string)?.trim().toLowerCase();
+  const password = (formData.get('password') as string) || '';
   const phone = (formData.get('phone') as string)?.trim() || null;
   const wing = (formData.get('wing') as MinistryWing) || 'Family of Praise';
   const wingRole = (formData.get('wingRole') as string)?.trim() || (formData.get('voicePart') as string) || 'Member';
@@ -110,13 +111,29 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
   const birthDate = (formData.get('birthDate') as string)?.trim() || null;
 
-  if (!memberId || !fullName || !email) {
-    return { error: 'Member ID, name, and email are required.' };
+  if (!memberId || !fullName) {
+    return { error: 'Member ID and name are required.' };
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Please enter a valid email address.' };
+  }
+  if (password && (password.length < 8 || password.length > 72)) {
+    return { error: 'Password must be between 8 and 72 characters.' };
   }
 
-  const targetUser = await findOne<{ role: UserRole }>('users', { id: memberId });
+  const targetUser = await findOne<{
+    role: UserRole;
+    password_hash: string | null;
+    status: UserStatus;
+  }>('users', { id: memberId });
   if (!targetUser) {
     return { error: 'Member not found.' };
+  }
+  if (!email && targetUser.password_hash) {
+    return { error: 'An email address is required for an account with login credentials.' };
+  }
+  if (password && !email) {
+    return { error: 'An email address is required before setting a password.' };
   }
 
   // Prevent non-admin from changing roles or editing admins
@@ -129,11 +146,12 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   }
 
   const now = new Date().toISOString();
+  const passwordHash = password ? await hashPassword(password) : undefined;
   try {
     await updateDocument('users', { id: memberId }, {
       $set: {
         full_name: fullName,
-        email,
+        email: email || null,
         phone,
         wing,
         wing_role: wingRole,
@@ -144,6 +162,12 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
         address,
         emergency_contact_name: emergencyName,
         emergency_contact_phone: emergencyPhone,
+        ...(passwordHash ? { password_hash: passwordHash } : {}),
+        ...(
+          targetUser.status === 'INACTIVE' && !targetUser.password_hash && passwordHash
+            ? { status: 'ACTIVE' }
+            : {}
+        ),
         updated_at: now,
       },
     });
@@ -199,7 +223,7 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
   return { success: `Member account status changed to ${newStatus}.` };
 }
 
-export async function importMembersAction(rows: MemberImportRow[], temporaryPassword: string) {
+export async function importMembersAction(rows: MemberImportRow[]) {
   const actor = await getCurrentUser();
   if (!actor || (!hasPermission(actor.role, 'MANAGE_USERS') && actor.role !== 'GENERAL_SECRETARY')) {
     return { error: 'Unauthorized: You do not have permission to import members.' };
@@ -207,12 +231,7 @@ export async function importMembersAction(rows: MemberImportRow[], temporaryPass
   if (!Array.isArray(rows) || rows.length === 0 || rows.length > 250) {
     return { error: 'Choose a file containing between 1 and 250 member rows.' };
   }
-  if (typeof temporaryPassword !== 'string' || temporaryPassword.length < 8 || temporaryPassword.length > 72) {
-    return { error: 'The temporary password must be between 8 and 72 characters.' };
-  }
-
   const results: MemberImportRowResult[] = [];
-  let passwordHash: string | undefined;
 
   for (let index = 0; index < rows.length; index += 1) {
     const input = rows[index];
@@ -237,16 +256,18 @@ export async function importMembersAction(rows: MemberImportRow[], temporaryPass
 
     const fullName = value('fullName', 200);
     const email = value('email', 254).toLowerCase();
-    if (!fullName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      results.push({ status: 'skipped', message: 'A valid name and email are required.' });
+    if (!fullName || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      results.push({ status: 'skipped', message: 'A valid name is required; enter a valid email if provided.' });
       continue;
     }
 
-    const existing = await findOne<{ id: string; role: UserRole; wing: MinistryWing | null }>(
-      'users',
-      { email },
-      { collation: { locale: 'en', strength: 2 } }
-    );
+    const existing = email
+      ? await findOne<{ id: string; role: UserRole; wing: MinistryWing | null }>(
+          'users',
+          { email },
+          { collation: { locale: 'en', strength: 2 } }
+        )
+      : null;
     if (existing) {
       if (resolution !== 'update') {
         results.push({ status: 'skipped', message: 'Email already exists; choose Update or Skip.' });
@@ -311,15 +332,14 @@ export async function importMembersAction(rows: MemberImportRow[], temporaryPass
       continue;
     }
     const wingRole = value('wingRole', 100) || 'Member';
-    passwordHash ||= await hashPassword(temporaryPassword);
     const now = new Date().toISOString();
     const id = `usr_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
 
     try {
       await insertDocument('users', {
         id,
-        email,
-        password_hash: passwordHash,
+        email: email || null,
+        password_hash: null,
         full_name: fullName,
         preferred_name: value('preferredName', 100) || fullName.split(/\s+/)[0],
         phone: value('phone', 60) || null,

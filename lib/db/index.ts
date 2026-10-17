@@ -59,13 +59,30 @@ export async function getDatabase() {
 async function ensureIndexes(db: ReturnType<MongoClient['db']>): Promise<void> {
   if (!globalForMongo.mongoIndexesPromise) {
     globalForMongo.mongoIndexesPromise = (async () => {
+      const users = db.collection('users');
+      const usersExists = await db.listCollections({ name: 'users' }, { nameOnly: true }).hasNext();
+      const emailIndexes = usersExists ? await users.listIndexes().toArray() : [];
+      const oldEmailIndex = emailIndexes.find((index) =>
+        index.unique === true &&
+        Object.keys(index.key).length === 1 &&
+        index.key.email === 1 &&
+        !index.partialFilterExpression
+      );
+      if (oldEmailIndex) {
+        await users.dropIndex(oldEmailIndex.name);
+      }
+
       await Promise.all([
-        db.collection('users').createIndex({ id: 1 }, { unique: true }),
-        db.collection('users').createIndex(
+        users.createIndex({ id: 1 }, { unique: true }),
+        users.createIndex(
           { email: 1 },
-          { unique: true, collation: { locale: 'en', strength: 2 } }
+          {
+            unique: true,
+            collation: { locale: 'en', strength: 2 },
+            partialFilterExpression: { email: { $type: 'string' } },
+          }
         ),
-        db.collection('users').createIndex(
+        users.createIndex(
           { is_initial_admin: 1 },
           { unique: true, partialFilterExpression: { is_initial_admin: true } }
         ),

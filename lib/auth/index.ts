@@ -78,6 +78,7 @@ export function sanitizeUser(user: User, requesterRole?: UserRole, isSelf = fals
   const safe: SafeUser = {
     id: user.id,
     email: user.email,
+    has_login_credentials: Boolean(user.email && user.password_hash),
     full_name: user.full_name,
     preferred_name: user.preferred_name,
     phone: user.phone,

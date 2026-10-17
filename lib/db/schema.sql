@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL COLLATE NOCASE,
-  password_hash TEXT NOT NULL,
+  email TEXT UNIQUE COLLATE NOCASE,
+  password_hash TEXT,
   full_name TEXT NOT NULL,
   preferred_name TEXT,
   phone TEXT,

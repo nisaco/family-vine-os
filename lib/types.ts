@@ -26,8 +26,8 @@ export type VoicePart =
 
 export interface User {
   id: string;
-  email: string;
-  password_hash: string;
+  email: string | null;
+  password_hash: string | null;
   full_name: string;
   preferred_name: string | null;
   phone: string | null;
@@ -47,6 +47,7 @@ export interface User {
 }
 
 export type SafeUser = Omit<User, 'password_hash' | 'officer_notes' | 'address' | 'emergency_contact_name' | 'emergency_contact_phone'> & {
+  has_login_credentials: boolean;
   // sensitive fields included only if requester is authorized
   address?: string | null;
   emergency_contact_name?: string | null;

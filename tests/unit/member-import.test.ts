@@ -44,6 +44,17 @@ describe('member import parsing', () => {
     }]);
   });
 
+  it('imports a name without requiring an email address', () => {
+    expect(mapMemberGrid([
+      ['Name', 'Phone'],
+      ['Kojo Mensah', '+233 123'],
+    ])).toMatchObject([{
+      fullName: 'Kojo Mensah',
+      email: '',
+      phone: '+233 123',
+    }]);
+  });
+
   it('reports malformed quoted CSV values', () => {
     expect(() => parseCsvGrid('Name,Email\n"Ada,ada@example.org')).toThrow('unclosed quoted value');
   });
