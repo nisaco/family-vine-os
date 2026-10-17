@@ -40,6 +40,7 @@ function getDifferences(row: ImportRow, member: SafeUser): string[] {
     ['Wing', member.wing, row.wing],
     ['Ministry role', member.wing_role, row.wingRole],
     ['Birth date', member.birth_date, row.birthDate],
+    ['Expected graduation', member.expected_graduation_year?.toString(), row.expectedGraduationYear],
     ['Join date', member.join_date, row.joinDate],
     ['Address', member.address, row.address],
     ['Emergency contact', member.emergency_contact_name, row.emergencyContactName],
@@ -283,7 +284,7 @@ export function MemberImport({ members }: MemberImportProps) {
                             {row.wing && !normalizeMemberWing(row.wing) && (
                               <span className="mt-1 block text-rose-700">Choose a supported wing or clear this value.</span>
                             )}
-                            {[row.preferredName, row.birthDate, row.joinDate, row.address, row.emergencyContactName, row.emergencyContactPhone]
+                            {[row.preferredName, row.birthDate, row.expectedGraduationYear, row.joinDate, row.address, row.emergencyContactName, row.emergencyContactPhone]
                               .filter(Boolean).length > 0 && (
                               <details className="mt-1">
                                 <summary className="cursor-pointer text-choir-800">Other details</summary>
@@ -291,6 +292,7 @@ export function MemberImport({ members }: MemberImportProps) {
                                   {[
                                     row.preferredName && `Preferred: ${row.preferredName}`,
                                     row.birthDate && `Birth date: ${row.birthDate}`,
+                                    row.expectedGraduationYear && `Expected graduation: ${row.expectedGraduationYear}`,
                                     row.joinDate && `Join date: ${row.joinDate}`,
                                     row.address && `Address: ${row.address}`,
                                     row.emergencyContactName && `Emergency: ${row.emergencyContactName}`,

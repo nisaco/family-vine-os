@@ -108,10 +108,13 @@ export default async function DashboardPage() {
     canViewFinances ? getFinancialSummary() : Promise.resolve(null),
     isOfficerOrAdmin ? getActionItems({ assignedTo: user.id, status: 'PENDING' }) : Promise.resolve([]),
   ]);
-  const activeMembersCount = members.filter((m) => m.status === 'ACTIVE').length;
-  const praiseCount = members.filter((m) => m.wing === 'Family of Praise' && m.status === 'ACTIVE').length;
-  const asaphitesCount = members.filter((m) => m.wing === 'Asaphites' && m.status === 'ACTIVE').length;
-  const vimmiesCount = members.filter((m) => m.wing === 'Vimmies' && m.status === 'ACTIVE').length;
+  const currentMembers = members.filter((member) =>
+    member.status === 'ACTIVE' && member.membership_status !== 'ALUMNI'
+  );
+  const activeMembersCount = currentMembers.length;
+  const praiseCount = currentMembers.filter((m) => m.wing === 'Family of Praise').length;
+  const asaphitesCount = currentMembers.filter((m) => m.wing === 'Asaphites').length;
+  const vimmiesCount = currentMembers.filter((m) => m.wing === 'Vimmies').length;
 
   return (
     <div className="space-y-6">

@@ -6,6 +6,7 @@ export interface ImportedMember {
   wing: string;
   wingRole: string;
   birthDate: string;
+  expectedGraduationYear: string;
   joinDate: string;
   address: string;
   emergencyContactName: string;
@@ -27,6 +28,7 @@ const fieldAliases: Record<keyof ImportedMember, string[]> = {
   wing: ['wing', 'ministry', 'department', 'group'],
   wingRole: ['wingrole', 'ministryrole', 'voicepart', 'specialization', 'instrument', 'position'],
   birthDate: ['birthdate', 'dateofbirth', 'dob', 'birthday'],
+  expectedGraduationYear: ['expectedgraduationyear', 'graduationyear', 'gradyear', 'classof'],
   joinDate: ['joindate', 'datejoined', 'membershipdate'],
   address: ['address', 'homeaddress'],
   emergencyContactName: ['emergencycontactname', 'emergencyname', 'nextofkin', 'nextofkinname'],
@@ -116,6 +118,7 @@ export function mapMemberGrid(grid: string[][]): ImportedMember[] {
       wing: normalizeMemberWing(rawWing) || rawWing,
       wingRole: getValue('wingRole'),
       birthDate: getValue('birthDate'),
+      expectedGraduationYear: getValue('expectedGraduationYear'),
       joinDate: getValue('joinDate'),
       address: getValue('address'),
       emergencyContactName: getValue('emergencyContactName'),

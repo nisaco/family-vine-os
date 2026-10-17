@@ -109,7 +109,11 @@ export function DirectoryClient({
       voiceFilter === 'ALL' || m.voice_part === voiceFilter || m.wing_role === voiceFilter;
 
     const matchesStatus =
-      statusFilter === 'ALL' || m.status === statusFilter;
+      statusFilter === 'ALL' ||
+      (statusFilter === 'CURRENT' && m.membership_status === 'CURRENT' && m.status === 'ACTIVE') ||
+      (statusFilter === 'ALUMNI' && m.membership_status === 'ALUMNI') ||
+      (statusFilter === 'INACTIVE' && m.status === 'INACTIVE') ||
+      (statusFilter === 'SUSPENDED' && m.status === 'SUSPENDED');
 
     return matchesSearch && matchesWing && matchesVoice && matchesStatus;
   });
@@ -191,9 +195,11 @@ export function DirectoryClient({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full min-w-0 sm:w-auto sm:flex-1 min-h-10 px-3 py-2 text-xs font-medium bg-stone-50 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-choir-700 text-stone-700"
           >
-            <option value="ACTIVE">Active Only</option>
-            <option value="INACTIVE">Deactivated</option>
-            <option value="ALL">All Statuses</option>
+            <option value="CURRENT">Current Members</option>
+            <option value="ALUMNI">Alumni / Graduated</option>
+            <option value="INACTIVE">Deactivated Accounts</option>
+            <option value="SUSPENDED">Suspended Accounts</option>
+            <option value="ALL">All Records</option>
           </select>
         </div>
       </div>
@@ -205,7 +211,7 @@ export function DirectoryClient({
             <div
               key={member.id}
               className={`bg-white rounded-xl border p-5 shadow-xs transition-all flex flex-col justify-between ${
-                member.status === 'INACTIVE'
+                member.status !== 'ACTIVE' || member.membership_status === 'ALUMNI'
                   ? 'border-stone-200 opacity-60 bg-stone-50/50'
                   : 'border-stone-200/90 hover:border-choir-300'
               }`}
@@ -236,6 +242,9 @@ export function DirectoryClient({
                         }`}>
                           {member.wing}
                         </span>
+                      )}
+                      {member.membership_status === 'ALUMNI' && (
+                        <Badge variant="warning" size="sm">Alumni</Badge>
                       )}
                       <Badge
                         variant={
@@ -270,12 +279,12 @@ export function DirectoryClient({
                         return null;
                       })()}
                     </div>
-                    {!member.has_login_credentials && (
+                    {!member.has_login_credentials && member.membership_status !== 'ALUMNI' && (
                       <Badge variant="warning" size="sm">
                         Login setup needed
                       </Badge>
                     )}
-                    {member.status === 'INACTIVE' && member.has_login_credentials && (
+                    {member.status === 'INACTIVE' && member.membership_status !== 'ALUMNI' && member.has_login_credentials && (
                       <Badge variant="danger" size="sm">
                         Deactivated
                       </Badge>
@@ -324,7 +333,7 @@ export function DirectoryClient({
                       <Edit2 className="w-3.5 h-3.5" />
                     </Button>
                   )}
-                  {isAdmin && member.id !== currentUserId && (
+                  {isAdmin && member.id !== currentUserId && member.membership_status !== 'ALUMNI' && (
                     <Button
                       size="sm"
                       variant="ghost"
@@ -394,6 +403,22 @@ export function DirectoryClient({
                 </span>
                 <span className="font-medium text-stone-900">
                   {selectedMember.join_date || 'N/A'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
+                  Membership
+                </span>
+                <span className="font-medium text-stone-900">
+                  {selectedMember.membership_status === 'ALUMNI' ? 'Alumni / Graduated' : 'Current Member'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[11px] uppercase tracking-wider text-stone-500 font-semibold block">
+                  Expected Graduation
+                </span>
+                <span className="font-medium text-stone-900">
+                  {selectedMember.expected_graduation_year || 'Not recorded'}
                 </span>
               </div>
               <div>
@@ -488,6 +513,16 @@ export function DirectoryClient({
           <Input label="Full Name" name="fullName" required placeholder="e.g. John Doe" />
           <Input label="Email Address" name="email" type="email" required placeholder="member@familyvinechoir.org" />
           <Input label="Phone Number" name="phone" placeholder="+1 (555) 000-0000" />
+          <Input
+            label="Expected Graduation Year (Optional)"
+            name="expectedGraduationYear"
+            type="number"
+            min={1900}
+            max={2200}
+            step={1}
+            placeholder="e.g. 2028"
+            helperText="Use the expected year they finish university."
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -626,6 +661,37 @@ export function DirectoryClient({
               </p>
             )}
             <Input label="Phone" name="phone" defaultValue={selectedMember.phone || ''} />
+            <Input
+              label="Expected Graduation Year (Optional)"
+              name="expectedGraduationYear"
+              type="number"
+              min={1900}
+              max={2200}
+              step={1}
+              defaultValue={selectedMember.expected_graduation_year || ''}
+              helperText="Use the expected year they finish university."
+            />
+            {isAdmin ? (
+              <div>
+                <label htmlFor="membershipStatus" className="mb-1.5 block text-sm font-medium text-stone-700">
+                  Membership Status
+                </label>
+                <select
+                  id="membershipStatus"
+                  name="membershipStatus"
+                  defaultValue={selectedMember.membership_status}
+                  className="min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-choir-700"
+                >
+                  <option value="CURRENT">Current Member</option>
+                  <option value="ALUMNI">Alumni / Graduated</option>
+                </select>
+                <p className="mt-1 text-sm text-stone-500">
+                  Marking someone as alumni removes them from current counts and disables their login while preserving their history.
+                </p>
+              </div>
+            ) : (
+              <input type="hidden" name="membershipStatus" value={selectedMember.membership_status} />
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

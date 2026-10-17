@@ -11,6 +11,7 @@ export type UserRole =
   | 'MEMBER';
 
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+export type MembershipStatus = 'CURRENT' | 'ALUMNI';
 
 export type MinistryWing =
   | 'Family of Praise' // The Choir
@@ -39,6 +40,8 @@ export interface User {
   voice_part: VoicePart | null;
   role: UserRole;
   status: UserStatus;
+  membership_status?: MembershipStatus;
+  expected_graduation_year?: number | null;
   address: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
@@ -49,8 +52,10 @@ export interface User {
   updated_at: string;
 }
 
-export type SafeUser = Omit<User, 'password_hash' | 'officer_notes' | 'address' | 'emergency_contact_name' | 'emergency_contact_phone'> & {
+export type SafeUser = Omit<User, 'password_hash' | 'officer_notes' | 'address' | 'emergency_contact_name' | 'emergency_contact_phone' | 'membership_status' | 'expected_graduation_year'> & {
   has_login_credentials: boolean;
+  membership_status: MembershipStatus;
+  expected_graduation_year: number | null;
   // sensitive fields included only if requester is authorized
   address?: string | null;
   emergency_contact_name?: string | null;

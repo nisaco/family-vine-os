@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
   voice_part TEXT, -- Legacy voice part compatibility
   role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'CHIEF_ASAPHITE', 'PRAYER_DIRECTOR', 'MUSIC_DIRECTOR', 'MEMBER')),
   status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+  membership_status TEXT NOT NULL DEFAULT 'CURRENT' CHECK(membership_status IN ('CURRENT', 'ALUMNI')),
+  expected_graduation_year INTEGER,
   address TEXT,
   emergency_contact_name TEXT,
   emergency_contact_phone TEXT,

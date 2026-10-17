@@ -87,6 +87,8 @@ export function sanitizeUser(user: User, requesterRole?: UserRole, isSelf = fals
     voice_part: user.voice_part,
     role: user.role,
     status: user.status,
+    membership_status: user.membership_status === 'ALUMNI' ? 'ALUMNI' : 'CURRENT',
+    expected_graduation_year: user.expected_graduation_year ?? null,
     birth_date: user.birth_date,
     join_date: user.join_date,
     created_at: user.created_at,

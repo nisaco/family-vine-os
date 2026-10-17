@@ -13,6 +13,7 @@ The system enforces least-privilege role boundaries on the server across all act
 1. **Access Administrator (`ADMIN`)**
    - Root installation configuration (Choir name, motto, currency code/symbol, timezone, standard dues).
    - Member access management (inviting users, assigning roles, deactivating or restoring accounts).
+   - Member lifecycle management: record expected graduation years and mark graduates as alumni. Alumni remain in historical records but are excluded from current-member counts and attendance selection; their login is disabled.
    - Inspection of the immutable system-wide audit history.
    - Deactivated users are blocked from logging in; active sessions are invalidated immediately upon deactivation.
 

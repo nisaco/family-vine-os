@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { deleteDocuments, findOne, insertDocument, updateDocument } from '@/lib/db';
 import { getCurrentUser, hasPermission, hashPassword } from '@/lib/auth';
 import { logAudit } from '@/lib/db/audit';
-import type { UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
+import type { MembershipStatus, UserRole, VoicePart, UserStatus, MinistryWing } from '@/lib/types';
 import { normalizeMemberWing, type ImportedMember } from '@/lib/utils/member-import';
 
 type MemberImportResolution = 'import' | 'update' | 'skip';
@@ -38,9 +38,13 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
   const emergencyName = (formData.get('emergencyContactName') as string)?.trim() || null;
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
   const birthDate = (formData.get('birthDate') as string)?.trim() || null;
+  const expectedGraduationYear = parseExpectedGraduationYear(formData.get('expectedGraduationYear'));
 
   if (!fullName || !email) {
     return { error: 'Member full name and email are required.' };
+  }
+  if (expectedGraduationYear === undefined) {
+    return { error: 'Enter a valid four-digit expected graduation year.' };
   }
 
   // Only ADMIN can assign officer or admin roles
@@ -66,6 +70,8 @@ export async function createMemberAction(prevState: unknown, formData: FormData)
       id, email, password_hash: passwordHash, full_name: fullName,
       preferred_name: fullName.split(' ')[0], phone, wing, wing_role: wingRole,
       voice_part: voicePart, role, status: 'ACTIVE', address,
+      membership_status: 'CURRENT',
+      expected_graduation_year: expectedGraduationYear,
       emergency_contact_name: emergencyName, emergency_contact_phone: emergencyPhone,
       officer_notes: officerNotes, birth_date: birthDate, join_date: now.slice(0, 10),
       created_at: now, updated_at: now,
@@ -110,9 +116,20 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
   const emergencyName = (formData.get('emergencyContactName') as string)?.trim() || null;
   const emergencyPhone = (formData.get('emergencyContactPhone') as string)?.trim() || null;
   const birthDate = (formData.get('birthDate') as string)?.trim() || null;
+  const expectedGraduationYear = parseExpectedGraduationYear(formData.get('expectedGraduationYear'));
+  const rawMembershipStatus = formData.get('membershipStatus');
+  const membershipStatus = rawMembershipStatus === 'CURRENT' || rawMembershipStatus === 'ALUMNI'
+    ? rawMembershipStatus as MembershipStatus
+    : undefined;
 
   if (!memberId || !fullName) {
     return { error: 'Member ID and name are required.' };
+  }
+  if (expectedGraduationYear === undefined) {
+    return { error: 'Enter a valid four-digit expected graduation year.' };
+  }
+  if (rawMembershipStatus && !membershipStatus) {
+    return { error: 'Choose a valid membership status.' };
   }
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { error: 'Please enter a valid email address.' };
@@ -125,6 +142,7 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
     role: UserRole;
     password_hash: string | null;
     status: UserStatus;
+    membership_status?: MembershipStatus;
   }>('users', { id: memberId });
   if (!targetUser) {
     return { error: 'Member not found.' };
@@ -144,9 +162,16 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
     }
     updatedRole = role;
   }
+  if (membershipStatus && membershipStatus !== (targetUser.membership_status || 'CURRENT') && actor.role !== 'ADMIN') {
+    return { error: 'Only administrators can change membership status.' };
+  }
+  if (actor.id === memberId && membershipStatus === 'ALUMNI') {
+    return { error: 'Cannot mark your own administrator account as alumni.' };
+  }
 
   const now = new Date().toISOString();
   const passwordHash = password ? await hashPassword(password) : undefined;
+  const isGraduating = membershipStatus === 'ALUMNI' && targetUser.membership_status !== 'ALUMNI';
   try {
     await updateDocument('users', { id: memberId }, {
       $set: {
@@ -159,12 +184,18 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
         role: updatedRole,
         officer_notes: officerNotes,
         birth_date: birthDate,
+        expected_graduation_year: expectedGraduationYear,
+        ...(membershipStatus ? { membership_status: membershipStatus } : {}),
+        ...(membershipStatus === 'ALUMNI' ? { status: 'INACTIVE' } : {}),
         address,
         emergency_contact_name: emergencyName,
         emergency_contact_phone: emergencyPhone,
         ...(passwordHash ? { password_hash: passwordHash } : {}),
         ...(
-          targetUser.status === 'INACTIVE' && !targetUser.password_hash && passwordHash
+          targetUser.status === 'INACTIVE' &&
+          !targetUser.password_hash &&
+          passwordHash &&
+          membershipStatus !== 'ALUMNI'
             ? { status: 'ACTIVE' }
             : {}
         ),
@@ -178,16 +209,30 @@ export async function updateMemberAction(prevState: unknown, formData: FormData)
     throw error;
   }
 
+  if (isGraduating || membershipStatus === 'ALUMNI') {
+    await deleteDocuments('sessions', { user_id: memberId });
+  }
+
   await logAudit({
     actorId: actor.id,
     actorName: actor.full_name,
     action: 'UPDATE_MEMBER',
     entityType: 'USER',
     entityId: memberId,
-    details: { fullName, email, role: updatedRole, wing, wingRole },
+    details: {
+      fullName,
+      email,
+      role: updatedRole,
+      wing,
+      wingRole,
+      ...(membershipStatus ? { membershipStatus } : {}),
+      ...(expectedGraduationYear !== null ? { expectedGraduationYear } : {}),
+    },
   });
 
   revalidatePath('/directory');
+  revalidatePath('/dashboard');
+  revalidatePath('/attendance');
   return { success: 'Member information updated successfully.' };
 }
 
@@ -199,6 +244,12 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
 
   if (actor.id === memberId && newStatus !== 'ACTIVE') {
     return { error: 'Cannot deactivate your own administrator account.' };
+  }
+  if (newStatus === 'ACTIVE') {
+    const targetUser = await findOne<{ membership_status?: MembershipStatus }>('users', { id: memberId });
+    if (targetUser?.membership_status === 'ALUMNI') {
+      return { error: 'Change this member back to Current Member before restoring login access.' };
+    }
   }
 
   const now = new Date().toISOString();
@@ -220,6 +271,8 @@ export async function toggleMemberStatusAction(memberId: string, newStatus: User
   });
 
   revalidatePath('/directory');
+  revalidatePath('/dashboard');
+  revalidatePath('/attendance');
   return { success: `Member account status changed to ${newStatus}.` };
 }
 
@@ -298,6 +351,14 @@ export async function importMembersAction(rows: MemberImportRow[]) {
         const optional = value(field, limit);
         if (optional) updates[column] = optional;
       }
+      const expectedGraduationYear = parseExpectedGraduationYear(value('expectedGraduationYear', 10));
+      if (expectedGraduationYear === undefined) {
+        results.push({ status: 'skipped', message: 'Expected graduation year must be a valid four-digit year.' });
+        continue;
+      }
+      if (expectedGraduationYear !== null) {
+        updates.expected_graduation_year = expectedGraduationYear;
+      }
       if (wing) updates.wing = wing;
       if (wingRole) updates.wing_role = wingRole;
       if (wingRole && effectiveWing === 'Family of Praise') {
@@ -332,6 +393,11 @@ export async function importMembersAction(rows: MemberImportRow[]) {
       continue;
     }
     const wingRole = value('wingRole', 100) || 'Member';
+    const expectedGraduationYear = parseExpectedGraduationYear(value('expectedGraduationYear', 10));
+    if (expectedGraduationYear === undefined) {
+      results.push({ status: 'skipped', message: 'Expected graduation year must be a valid four-digit year.' });
+      continue;
+    }
     const now = new Date().toISOString();
     const id = `usr_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`;
 
@@ -348,6 +414,8 @@ export async function importMembersAction(rows: MemberImportRow[]) {
         voice_part: (wing || 'Family of Praise') === 'Family of Praise' ? asVoicePart(wingRole) : null,
         role: 'MEMBER',
         status: 'ACTIVE',
+        membership_status: 'CURRENT',
+        expected_graduation_year: expectedGraduationYear,
         address: value('address', 500) || null,
         emergency_contact_name: value('emergencyContactName', 200) || null,
         emergency_contact_phone: value('emergencyContactPhone', 60) || null,
@@ -383,6 +451,16 @@ export async function importMembersAction(rows: MemberImportRow[]) {
     updated: results.filter((row) => row.status === 'updated').length,
     skipped: results.filter((row) => row.status === 'skipped').length,
   };
+}
+
+function parseExpectedGraduationYear(value: FormDataEntryValue | null): number | null | undefined {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const rawYear = value.trim();
+  if (!rawYear) return null;
+  if (!/^\d{4}$/.test(rawYear)) return undefined;
+  const year = Number(rawYear);
+  return year >= 1900 && year <= 2200 ? year : undefined;
 }
 
 function asVoicePart(value: string): VoicePart | null {

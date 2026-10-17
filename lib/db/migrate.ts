@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS users (
   voice_part TEXT,
   role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'CHIEF_ASAPHITE', 'PRAYER_DIRECTOR', 'MUSIC_DIRECTOR', 'MEMBER')),
   status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+  membership_status TEXT NOT NULL DEFAULT 'CURRENT' CHECK(membership_status IN ('CURRENT', 'ALUMNI')),
+  expected_graduation_year INTEGER,
   address TEXT,
   emergency_contact_name TEXT,
   emergency_contact_phone TEXT,
@@ -242,6 +244,12 @@ export function runMigrations(db: Database.Database): void {
     if (!userColNames.has('wing_role')) {
       db.exec('ALTER TABLE users ADD COLUMN wing_role TEXT');
     }
+    if (!userColNames.has('membership_status')) {
+      db.exec("ALTER TABLE users ADD COLUMN membership_status TEXT NOT NULL DEFAULT 'CURRENT' CHECK(membership_status IN ('CURRENT', 'ALUMNI'))");
+    }
+    if (!userColNames.has('expected_graduation_year')) {
+      db.exec('ALTER TABLE users ADD COLUMN expected_graduation_year INTEGER');
+    }
 
     // Default wing backfill for existing rows
     db.exec(`
@@ -255,23 +263,35 @@ export function runMigrations(db: Database.Database): void {
       WHERE wing IS NULL AND role IN ('ADMIN', 'PRESIDENT');
     `);
 
-    // Check if users has legacy CHECK constraint on role excluding WELFARE_OFFICER
+    // Rebuild legacy user tables to support current roles and optional login credentials.
     const usersSchemaRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as { sql: string } | undefined;
-    if (usersSchemaRow && usersSchemaRow.sql && !usersSchemaRow.sql.includes('WELFARE_OFFICER')) {
+    const currentUserColumns = db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string; notnull: number }>;
+    const currentUserColumnsByName = new Map(currentUserColumns.map((column) => [column.name, column]));
+    if (
+      usersSchemaRow &&
+      usersSchemaRow.sql &&
+      (
+        !usersSchemaRow.sql.includes('MUSIC_DIRECTOR') ||
+        currentUserColumnsByName.get('email')?.notnull === 1 ||
+        currentUserColumnsByName.get('password_hash')?.notnull === 1
+      )
+    ) {
       db.exec(`
         PRAGMA foreign_keys = OFF;
         CREATE TABLE users_migrated (
           id TEXT PRIMARY KEY,
-          email TEXT UNIQUE NOT NULL COLLATE NOCASE,
-          password_hash TEXT NOT NULL,
+          email TEXT UNIQUE COLLATE NOCASE,
+          password_hash TEXT,
           full_name TEXT NOT NULL,
           preferred_name TEXT,
           phone TEXT,
           wing TEXT,
           wing_role TEXT,
           voice_part TEXT,
-          role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'MEMBER')),
+          role TEXT NOT NULL CHECK(role IN ('ADMIN', 'PRESIDENT', 'GENERAL_SECRETARY', 'FINANCIAL_SECRETARY', 'TREASURER', 'WELFARE_OFFICER', 'CHIEF_ASAPHITE', 'PRAYER_DIRECTOR', 'MUSIC_DIRECTOR', 'MEMBER')),
           status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+          membership_status TEXT NOT NULL DEFAULT 'CURRENT' CHECK(membership_status IN ('CURRENT', 'ALUMNI')),
+          expected_graduation_year INTEGER,
           address TEXT,
           emergency_contact_name TEXT,
           emergency_contact_phone TEXT,
@@ -281,7 +301,8 @@ export function runMigrations(db: Database.Database): void {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         );
-        INSERT INTO users_migrated SELECT id, email, password_hash, full_name, preferred_name, phone, wing, wing_role, voice_part, role, status, address, emergency_contact_name, emergency_contact_phone, officer_notes, birth_date, join_date, created_at, updated_at FROM users;
+        INSERT INTO users_migrated (id, email, password_hash, full_name, preferred_name, phone, wing, wing_role, voice_part, role, status, membership_status, expected_graduation_year, address, emergency_contact_name, emergency_contact_phone, officer_notes, birth_date, join_date, created_at, updated_at)
+        SELECT id, email, password_hash, full_name, preferred_name, phone, wing, wing_role, voice_part, role, status, membership_status, expected_graduation_year, address, emergency_contact_name, emergency_contact_phone, officer_notes, birth_date, join_date, created_at, updated_at FROM users;
         DROP TABLE users;
         ALTER TABLE users_migrated RENAME TO users;
         CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);

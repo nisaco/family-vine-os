@@ -60,7 +60,7 @@ export function AttendanceTakerClient({
   const selectedEvent = events.find((e) => e.id === selectedEventId) || events[0];
 
   const filteredMembers = members.filter((m) => {
-    if (m.status !== 'ACTIVE') return false;
+    if (m.status !== 'ACTIVE' || m.membership_status === 'ALUMNI') return false;
     const matchesSearch =
       m.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.voice_part && m.voice_part.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -390,4 +390,3 @@ export function AttendanceTakerClient({
     </div>
   );
 }
-

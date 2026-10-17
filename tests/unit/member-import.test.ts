@@ -23,6 +23,7 @@ describe('member import parsing', () => {
       wing: 'Family of Praise',
       wingRole: 'Soprano',
       birthDate: '2000-02-03',
+      expectedGraduationYear: '',
       joinDate: '',
       address: '',
       emergencyContactName: '',
@@ -52,6 +53,16 @@ describe('member import parsing', () => {
       fullName: 'Kojo Mensah',
       email: '',
       phone: '+233 123',
+    }]);
+  });
+
+  it('maps expected graduation year from a common class-year header', () => {
+    expect(mapMemberGrid([
+      ['Name', 'Class of'],
+      ['Kojo Mensah', '2028'],
+    ])).toMatchObject([{
+      fullName: 'Kojo Mensah',
+      expectedGraduationYear: '2028',
     }]);
   });
 
